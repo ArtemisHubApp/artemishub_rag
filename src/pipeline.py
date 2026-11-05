@@ -28,31 +28,46 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     
     orchestrator = OrchestratePipelineUseCase(repo, ingest_uc, prepare_uc, index_uc)
     
-    final_state = orchestrator.execute(enabled)
-    
-    # Collect extended stats for compatibility with Camila's requirements and tests
-    docs = repo.load_documents()
-    chunks = repo.load_chunks()
-    
-    duration = round(time.monotonic() - start, 2)
-    
     stats = {
-        "status": "success" if final_state.status == "COMPLETED" else "failed",
-        "stage": final_state.current_stage,
-        "duration_seconds": duration,
-        "documents": len(docs),
-        "sources": len({d.document_id for d in docs}),
-        "chunks": len(chunks),
-        "enabled_sources": len(enabled),
-        "index_published": final_state.status == "COMPLETED"
+        "status": "failed",
+        "stage": "UNKNOWN",
+        "duration_seconds": 0,
+        "documents": 0,
+        "sources": 0,
+        "chunks": 0,
+        "enabled_sources": len(enabled)
     }
-    
-    # Write report for backward compatibility (tests)
-    reports_dir = ROOT / "reports"
-    reports_dir.mkdir(exist_ok=True)
-    (reports_dir / "latest_run.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
-    
-    LOG.info(f"Pipeline finished in {duration}s. Final State: {final_state.status}")
+
+    try:
+        final_state = orchestrator.execute(enabled)
+        stats.update({
+            "status": "success" if final_state.status == "COMPLETED" else "failed",
+            "stage": final_state.current_stage,
+        })
+    except Exception as e:
+        # We catch it here to ensure stats are written, then re-raise
+        # Note: state might be updated inside orchestrator.execute before failure
+        state = repo.get_state()
+        stats["stage"] = state.current_stage
+        raise e
+    finally:
+        duration = round(time.monotonic() - start, 2)
+        stats["duration_seconds"] = duration
+        
+        docs = repo.load_documents()
+        chunks = repo.load_chunks()
+        stats.update({
+            "documents": len(docs),
+            "sources": len({d.document_id for d in docs}),
+            "chunks": len(chunks),
+        })
+        
+        # Write report for backward compatibility (tests)
+        reports_dir = ROOT / "reports"
+        reports_dir.mkdir(exist_ok=True)
+        (reports_dir / "latest_run.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
+        
+        LOG.info(f"Pipeline finished in {duration}s. Status: {stats['status']}")
     
     return stats
 
@@ -68,7 +83,6 @@ def main():
     try:
         result = run(args.sources, args.skip_index, args.allow_partial)
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        # Use the status code convention from Camila's PR
         if result["status"] == "partial":
             raise SystemExit(2)
         raise SystemExit(0)
