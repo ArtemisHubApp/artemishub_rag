@@ -1,0 +1,4 @@
+{"question":"O que a Lei 14.611/2023 estabelece sobre igualdade salarial?","relevant_document_ids":["lei_14611_2023"],"review_status":"to_verify"}
+{"question":"Quais medidas de transparência salarial estão previstas na regulamentação?","relevant_document_ids":["decreto_11795_2023"],"review_status":"to_verify"}
+{"question":"Como funciona a fiscalização das medidas de igualdade salarial?","relevant_document_ids":[],"review_status":"needs_ground_truth"}
+{"question":"Qual será o salário exato de uma engenheira de software em 2030?","relevant_document_ids":[],"expected_behavior":"abstain"}

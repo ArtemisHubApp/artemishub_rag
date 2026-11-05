@@ -1,0 +1,48 @@
+[
+  {
+    "id": "lei_14611_2023",
+    "title": "Lei 14.611/2023",
+    "organization": "Presidência da República",
+    "url": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14611.htm",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true
+  },
+  {
+    "id": "clt_art_461",
+    "title": "CLT, artigo 461",
+    "organization": "Presidência da República",
+    "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm",
+    "topic": "equiparacao_salarial",
+    "kind": "html",
+    "enabled": false,
+    "note": "A página contém toda a CLT. Exige extração específica do artigo 461 antes de ativar."
+  },
+  {
+    "id": "decreto_11795_2023",
+    "title": "Decreto 11.795/2023",
+    "organization": "Presidência da República",
+    "url": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/Decreto/D11795.htm",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true
+  },
+  {
+    "id": "cartilha_igualdade_salarial",
+    "title": "Cartilha Tira-Dúvidas da Lei da Igualdade Salarial",
+    "organization": "Ministério das Mulheres e MTE",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/cartilha-tira-duvidas-lei-da-igualdade-salarial-e-de-criterios-remuneratorios-entre-mulheres-e-homens_defeso.pdf/@@display-file/file",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": true
+  },
+  {
+    "id": "estatisticas_genero_ibge",
+    "title": "Estatísticas de Gênero - IBGE",
+    "organization": "IBGE",
+    "url": "https://biblioteca.ibge.gov.br/visualizacao/livros/liv102066_informativo.pdf",
+    "topic": "estatisticas_genero",
+    "kind": "pdf",
+    "enabled": true
+  }
+]
