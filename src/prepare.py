@@ -24,7 +24,7 @@ def split_text(text, chunk_size=1200, overlap=180):
     return result
 
 
-def prepare(documents, chunk_size=1200, overlap=180):
+def prepare(documents, chunk_size=600, overlap=100):
     rows = []
     seen = set()
     for doc in documents:

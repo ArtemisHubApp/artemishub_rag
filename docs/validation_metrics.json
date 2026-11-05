@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-05",
+  "initial_2_sources_dense_1200": {
+    "page_recall_at_5": 0.8333333333333334,
+    "page_hit_rate_at_5": 0.8666666666666667,
+    "page_mrr_at_5": 0.7388888888888889
+  },
+  "same_2_sources_pages_600": {
+    "page_recall_at_5": 0.9666666666666667,
+    "page_hit_rate_at_5": 1.0,
+    "page_mrr_at_5": 0.7744444444444445
+  },
+  "same_5_sources_dense_1200": {
+    "page_recall_at_5": 0.7,
+    "page_hit_rate_at_5": 0.7333333333333333,
+    "page_mrr_at_5": 0.68
+  },
+  "same_5_sources_pages_600": {
+    "page_recall_at_5": 0.9,
+    "page_hit_rate_at_5": 0.9333333333333333,
+    "page_mrr_at_5": 0.6911111111111111
+  },
+  "same_5_sources_hybrid_600_original15": {
+    "recall_at_5": 1.0,
+    "hit_rate_at_5": 1.0,
+    "mrr_at_5": 1.0,
+    "page_recall_at_5": 1.0,
+    "page_hit_rate_at_5": 1.0,
+    "page_mrr_at_5": 0.8333333333333334
+  },
+  "final_16_answerable": {
+    "recall_at_5": 1.0,
+    "hit_rate_at_5": 1.0,
+    "mrr_at_5": 0.9583333333333334,
+    "page_recall_at_5": 1.0,
+    "page_hit_rate_at_5": 1.0,
+    "page_mrr_at_5": 0.8020833333333334
+  },
+  "mean_latency_ms": 8.748375,
+  "active_index": {
+    "collection": "stem_career_docs_ad59c5af59e8407da9e94f8af11f13bd",
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "embedding_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+    "partial": false,
+    "chunks": 221,
+    "dataset_sha256": "c784bf2f85aae103018cdae91424f0cd223c8148dc7041938b6ca3fd00071a43",
+    "snapshot": "snapshots/stem_career_docs_ad59c5af59e8407da9e94f8af11f13bd"
+  },
+  "gold_review": {
+    "answerable": 16,
+    "unanswerable": 2,
+    "pending": [
+      "q16",
+      "q17"
+    ],
+    "independent_human_review": "pending for all20"
+  },
+  "limitations": [
+    "In-sample comparisons, no held-out evaluation",
+    "Page/HTML-section metrics do not measure exact passage completeness or generated-answer fidelity",
+    "Source alternatives do not certify current law or byte equivalence with unavailable Planalto"
+  ]
+}

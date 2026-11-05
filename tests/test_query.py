@@ -47,3 +47,23 @@ def test_generation_without_credentials(monkeypatch, hits):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
     assert generate("Pergunta", hits) is None
+
+
+def test_page_diversity_preserves_ranking_and_fills_small_corpus():
+    from src.query import diversify_pages
+
+    hits = [{'chunk_id': str(i), 'metadata': {'document_id': doc, 'page': page}}
+            for i, (doc, page) in enumerate([('a', '1'), ('a', '1'), ('a', '2'), ('b', '1'), ('a', '2')])]
+    result = diversify_pages(hits, 3)
+    assert [h['chunk_id'] for h in result] == ['0', '2', '3']
+    assert len(diversify_pages(hits[:2], 5)) == 2
+    assert diversify_pages([], 5) == []
+
+
+def test_generation_context_exposes_alternative_provenance(hits):
+    hits[0]['metadata']['metadata'] = json.dumps({'primary_url': 'https://primary.example.org',
+        'version': 'Original publication', 'publisher': 'Official publisher', 'alternative_used': True, 'article': '461'})
+    context = json.loads(query.build_context(hits))[0]
+    assert context['primary_url'] == 'https://primary.example.org'
+    assert context['version'] == 'Original publication' and context['alternative_used']
+    assert context['url'] == hits[0]['metadata']['source_url']

@@ -59,3 +59,40 @@ def test_forbidden_is_not_retried():
           pytest.raises(httpx.HTTPStatusError)):
         ingest.fetch(client, "https://example.org", 2)
     assert len(calls) == 1
+
+
+def test_legal_selector_preserves_heading_and_excludes_navigation():
+    html = b'<body><h1>GENERIC NAVIGATION</h1><h1>LEI 14.611</h1><div>MENU</div><div class="textoNorma"><p>Art. 1. Evidence.</p></div><div>FOOTER</div></body>'
+    text = ingest.extract_html(html, selector='.textoNorma')[0]['text']
+    assert 'LEI 14.611' in text and 'Evidence' in text
+    assert 'MENU' not in text and 'FOOTER' not in text
+    assert 'GENERIC NAVIGATION' not in text
+    with pytest.raises(ValueError, match='selector not found'):
+        ingest.extract_html(html, selector='.missing')
+
+
+def test_official_alternative_retains_actual_url_and_failed_attempt(tmp_path, monkeypatch):
+    primary = 'https://primary.example.org/law'
+    alternate = 'https://official.example.org/law'
+    source = {'id': 'law', 'url': primary, 'organization': 'Issuer', 'title': 'Fixture law',
+              'topic': 'test', 'kind': 'html', 'expected_text': ['Mandatory law'],
+              'alternatives': [{'url': alternate, 'publisher': 'Official publisher',
+                                'version': 'Original publication', 'html_selector': '.law'}]}
+    monkeypatch.setattr(ingest, 'RAW', tmp_path)
+    real_client = httpx.Client
+
+    def handler(request):
+        if str(request.url) == primary:
+            raise httpx.ReadError('Simulated reset', request=request)
+        return httpx.Response(200, text='<h1>Mandatory law</h1><div class="law">' + 'Fixture evidence. ' * 20 + '</div>')
+
+    monkeypatch.setattr(ingest.httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+    outcomes = []
+    docs = ingest.collect([source], retries=0, publish=False, outcomes=outcomes)
+    assert docs[0]['source_url'] == alternate
+    assert docs[0]['source'] == 'Official publisher'
+    assert docs[0]['metadata']['primary_url'] == primary
+    assert docs[0]['metadata']['alternative_used'] is True
+    assert outcomes[0]['status'] == 'success'
+    assert [a['status'] for a in outcomes[0]['attempts']] == ['failed', 'success']
+    assert len(list((tmp_path / 'versions/law').glob('*.html'))) == 1

@@ -111,3 +111,15 @@ def test_metadata_only_change_reuses_embedding(tmp_path, document):
     assert result["added_or_updated"] == 1
     assert encoder.encoded == before and result["embeddings_generated"] == 0
     assert active_collection(tmp_path)[0].get(include=["metadatas"])["metadatas"][0]["title"] == document["title"]
+
+
+def test_hybrid_retrieval_and_distance_cutoff(tmp_path, document):
+    encoder = LocalEncoder()
+    chunks = prepare([document])
+    build_index(chunks, [document], path=tmp_path, model=encoder, model_name='local-fixture')
+    retriever = Retriever(path=tmp_path, model=encoder, model_name='local-fixture', strategy='hybrid')
+    hits = retriever.retrieve('salarial')
+    assert hits and all('distance' in h and 'retrieval_score' in h for h in hits)
+    assert retriever.lexical is not None
+    retriever.max_distance = -1.0
+    assert retriever.retrieve('salarial') == []

@@ -33,6 +33,11 @@ def check_evidence(cases, documents):
     return checked
 
 
+def page_locator(document_id, page):
+    """Chroma stores absent HTML pages as empty strings; JSONL uses null."""
+    return document_id, None if page in (None, "") else str(page)
+
+
 def evaluate(cases, retriever):
     scored, unanswered, excluded = [], [], []
     for case in cases:
@@ -52,8 +57,8 @@ def evaluate(cases, retriever):
             evidence = case.get("expected_evidence", [])
             page_metrics = {}
             if evidence:
-                pages = [(h["metadata"]["document_id"], str(h["metadata"].get("page"))) for h in hits]
-                expected = [(e["document_id"], str(e.get("page"))) for e in evidence]
+                pages = [page_locator(h["metadata"]["document_id"], h["metadata"].get("page")) for h in hits]
+                expected = [page_locator(e["document_id"], e.get("page")) for e in evidence]
                 page_metrics = {f"page_{key}": value for key, value in score_ranking(pages, expected).items()}
                 row["ranked_pages"] = pages
             scored.append({**row, **score_ranking(ranked, relevant), **page_metrics})
@@ -76,14 +81,20 @@ def evaluate(cases, retriever):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--allow-partial", action="store_true")
+    parser.add_argument("--retrieval", choices=("dense", "pages", "hybrid"), default="hybrid")
+    parser.add_argument("--output", help="Report path; defaults to reports/retrieval_evaluation.json")
     args = parser.parse_args()
     cases = load_jsonl(ROOT / "evaluation" / "questions.jsonl")
-    retriever = Retriever(allow_partial=args.allow_partial)
+    retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
     snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
     cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"))
     report = evaluate(cases, retriever)
-    report["configuration"] = {"top_k": 5, "embedding_model": retriever.model_name, "index": retriever.active}
-    write_json(ROOT / "reports" / "retrieval_evaluation.json", report)
+    report["configuration"] = {"top_k": 5, "retrieval": args.retrieval,
+                               "candidate_multiplier": 1 if args.retrieval == "dense" else 4,
+                               "lexical": {"method": "BM25", "k1": 1.5, "b": 0.75, "rrf_constant": 60}
+                               if args.retrieval == "hybrid" else None,
+                               "embedding_model": retriever.model_name, "index": retriever.active}
+    write_json(args.output or ROOT / "reports" / "retrieval_evaluation.json", report)
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
 
