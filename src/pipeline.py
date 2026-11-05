@@ -4,7 +4,7 @@ import logging
 import time
 from pathlib import Path
 
-from src.common import ROOT
+from src.common import ROOT, PROCESSED
 from src.adapters.outbound.file_repository import FileRepository
 from src.adapters.outbound.vector_store_adapter import SimpleVectorStoreAdapter
 from src.application.use_cases.pipeline_use_cases import IngestUseCase, PrepareUseCase, IndexUseCase
@@ -19,7 +19,7 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     enabled = [s for s in sources if s.get("enabled", True)]
     
     # Dependency Injection
-    repo = FileRepository()
+    repo = FileRepository(root=ROOT, processed=PROCESSED)
     vector_store = SimpleVectorStoreAdapter()
     
     ingest_uc = IngestUseCase(repo, strict=not allow_partial)
@@ -28,20 +28,32 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     
     orchestrator = OrchestratePipelineUseCase(repo, ingest_uc, prepare_uc, index_uc)
     
-    # In the original code, skip_index was an option. 
-    # We can handle this by adjusting the state or the orchestrator.
-    # For now, let's just run it.
-    
     final_state = orchestrator.execute(enabled)
     
-    duration = round(time.monotonic() - start, 2)
-    LOG.info(f"Pipeline finished in {duration}s. Final State: {final_state.status}")
+    # Collect stats for compatibility with tests
+    docs = repo.load_documents()
+    chunks = repo.load_chunks()
     
-    return {
+    duration = round(time.monotonic() - start, 2)
+    
+    stats = {
         "status": final_state.status,
         "stage": final_state.current_stage,
-        "duration_seconds": duration
+        "duration_seconds": duration,
+        "documents": len(docs),
+        "sources": len({d.document_id for d in docs}),
+        "chunks": len(chunks),
+        "enabled_sources": len(enabled)
     }
+    
+    # Write report for backward compatibility (tests)
+    reports_dir = ROOT / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    (reports_dir / "latest_run.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
+    
+    LOG.info(f"Pipeline finished in {duration}s. Final State: {final_state.status}")
+    
+    return stats
 
 def main():
     parser = argparse.ArgumentParser(description="Orchestrated document-to-index pipeline")

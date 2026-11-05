@@ -48,7 +48,7 @@ class PrepareUseCase:
         
         chunks = []
         for c in chunks_data:
-            known_fields = {'document_id', 'text', 'content_sha256', 'chunk_id'}
+            known_fields = {'document_id', 'source_url', 'text', 'content_sha256', 'chunk_id'}
             main_args = {k: v for k, v in c.items() if k in known_fields}
             metadata = {k: v for k, v in c.items() if k not in known_fields}
             chunks.append(Chunk(**main_args, metadata=metadata))

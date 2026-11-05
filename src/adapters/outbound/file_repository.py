@@ -8,11 +8,14 @@ from src.domain.entities import Document, Chunk, PipelineState
 from src.common import PROCESSED, ROOT
 
 class FileRepository(PipelineRepository):
-    def __init__(self):
-        self.docs_path = PROCESSED / "documents.jsonl"
-        self.chunks_path = PROCESSED / "chunks.jsonl"
-        self.state_path = ROOT / "reports" / "state.json"
-        ROOT.joinpath("reports").mkdir(exist_ok=True)
+    def __init__(self, root=ROOT, processed=PROCESSED):
+        self.root = root
+        self.processed = processed
+        self.processed.mkdir(parents=True, exist_ok=True)
+        self.docs_path = self.processed / "documents.jsonl"
+        self.chunks_path = self.processed / "chunks.jsonl"
+        self.state_path = self.root / "reports" / "state.json"
+        self.root.joinpath("reports").mkdir(parents=True, exist_ok=True)
 
     def save_documents(self, docs: List[Document]):
         with open(self.docs_path, "w", encoding="utf-8") as f:

@@ -15,6 +15,7 @@ class Document:
 @dataclass
 class Chunk:
     document_id: str
+    source_url: str
     text: str
     content_sha256: str
     chunk_id: Optional[str] = None

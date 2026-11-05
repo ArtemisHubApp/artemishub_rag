@@ -38,3 +38,16 @@ def digest(text):
 
 def embedding_model():
     return os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+
+def validate_documents(documents, minimum_chars=100):
+    if not documents:
+        raise ValueError("No documents extracted")
+    for doc in documents:
+        # Handle both dicts and Document entities
+        data = doc.__dict__ if hasattr(doc, '__dict__') else doc
+        for key in ("document_id", "source_url", "title", "content", "content_sha256"):
+            if not data.get(key):
+                raise ValueError(f"Missing {key} in document {data.get('document_id')}")
+        if len(data["content"].strip()) < minimum_chars:
+            raise ValueError(f"Document section too short: {data.get('document_id')} page {data.get('page')}")
+    return {"documents": len(documents), "sources": len({d.document_id if hasattr(d, 'document_id') else d.get('document_id') for d in documents})}
