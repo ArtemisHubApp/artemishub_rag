@@ -4,15 +4,10 @@ import logging
 import time
 from pathlib import Path
 
-from src.adapters.outbound.file_repository import FileRepository
-from src.adapters.outbound.vector_store_adapter import SimpleVectorStoreAdapter
-from src.application.use_cases.orchestrator import OrchestratePipelineUseCase
-from src.application.use_cases.pipeline_use_cases import (
-    IndexUseCase,
-    IngestUseCase,
-    PrepareUseCase,
-)
 from src.common import PROCESSED, ROOT
+from src.ingest import collect
+from src.prepare import prepare
+from src.index import build_index
 
 LOG = logging.getLogger("rag_pipeline")
 
@@ -22,19 +17,9 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     sources = json.loads(sources_path.read_text(encoding="utf-8"))
     enabled = [s for s in sources if s.get("enabled", True)]
     
-    # Dependency Injection
-    repo = FileRepository(root=ROOT, processed=PROCESSED)
-    vector_store = SimpleVectorStoreAdapter()
-    
-    ingest_uc = IngestUseCase(repo, strict=not allow_partial)
-    prepare_uc = PrepareUseCase(repo)
-    index_uc = IndexUseCase(vector_store)
-    
-    orchestrator = OrchestratePipelineUseCase(repo, ingest_uc, prepare_uc, index_uc)
-    
     stats = {
         "status": "failed",
-        "stage": "UNKNOWN",
+        "stage": "START",
         "duration_seconds": 0,
         "documents": 0,
         "sources": 0,
@@ -43,26 +28,51 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     }
 
     try:
-        final_state = orchestrator.execute(enabled)
-        stats.update({
-            "status": "success" if final_state.status == "COMPLETED" else "failed",
-            "stage": final_state.current_stage,
-        })
+        # Stage 1: Ingest
+        LOG.info("Stage: INGEST")
+        stats["stage"] = "INGEST"
+        docs = collect(sources, strict=not allow_partial, publish=True)
+        
+        # Stage 2: Prepare
+        LOG.info("Stage: PREPARE")
+        stats["stage"] = "PREPARE"
+        chunks = prepare(docs)
+        # Save chunks to disk to maintain compatibility with build_index and tests
+        from src.common import write_jsonl
+        write_jsonl(PROCESSED / "chunks.jsonl", chunks)
+        
+        # Stage 3: Index
+        if not skip_index:
+            LOG.info("Stage: INDEX")
+            stats["stage"] = "INDEX"
+            index_result = build_index(chunks=chunks, documents=docs, partial=allow_partial)
+            stats["index_stats"] = index_result
+        else:
+            LOG.info("Stage: INDEX (skipped)")
+            stats["status"] = "skipped_index"
+
+        stats["status"] = "success"
+        stats["stage"] = "COMPLETED"
+
     except Exception as e:
-        state = repo.get_state()
-        stats["stage"] = state.current_stage
+        LOG.error(f"Pipeline failed at stage {stats['stage']}: {e}")
         raise e
     finally:
         duration = round(time.monotonic() - start, 2)
         stats["duration_seconds"] = duration
         
-        docs = repo.load_documents()
-        chunks = repo.load_chunks()
-        stats.update({
-            "documents": len(docs),
-            "sources": len({d.document_id for d in docs}),
-            "chunks": len(chunks),
-        })
+        # Final stats collection
+        try:
+            from src.common import load_jsonl
+            docs = load_jsonl(PROCESSED / "documents.jsonl") if (PROCESSED / "documents.jsonl").exists() else []
+            chunks = load_jsonl(PROCESSED / "chunks.jsonl") if (PROCESSED / "chunks.jsonl").exists() else []
+            stats.update({
+                "documents": len(docs),
+                "sources": len({d["document_id"] for d in docs}),
+                "chunks": len(chunks),
+            })
+        except Exception as e:
+            LOG.warning(f"Could not collect final stats: {e}")
         
         reports_dir = ROOT / "reports"
         reports_dir.mkdir(exist_ok=True)
@@ -73,10 +83,10 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
     return stats
 
 def main():
-    parser = argparse.ArgumentParser(description="Orchestrated document-to-index pipeline")
+    parser = argparse.ArgumentParser(description="Document-to-index pipeline")
     parser.add_argument("--sources", help="Path to sources JSON manifest")
     parser.add_argument("--skip-index", action="store_true", help="Validate dataset without embeddings")
-    parser.add_argument("--allow-partial", action="store_true", help="Diagnostic partial index (queries require explicit opt-in)")
+    parser.add_argument("--allow-partial", action="store_true", help="Allow partial index for diagnostics")
     args = parser.parse_args()
     
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
@@ -84,14 +94,9 @@ def main():
     try:
         result = run(args.sources, args.skip_index, args.allow_partial)
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        if result["status"] == "partial":
-            raise SystemExit(2)
         raise SystemExit(0)
-    except (OSError, ValueError, RuntimeError):
-        LOG.error("Pipeline failed; inspect reports/latest_run.json")
-        raise SystemExit(1) from None
     except Exception:
-        LOG.exception("Unexpected pipeline failure")
+        LOG.exception("Pipeline failure")
         raise SystemExit(1) from None
 
 if __name__ == "__main__":

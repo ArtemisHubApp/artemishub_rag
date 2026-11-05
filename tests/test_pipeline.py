@@ -12,8 +12,25 @@ def local_pipeline(tmp_path, monkeypatch):
               "url": "https://example.org/document", "topic": "career", "kind": "html"}
     manifest = tmp_path / "sources.json"
     manifest.write_text(json.dumps([source]), encoding="utf-8")
-    monkeypatch.setattr(pipeline, "ROOT", tmp_path)
-    monkeypatch.setattr(pipeline, "PROCESSED", tmp_path / "processed")
+    
+    # Monkeypatch src.common globally so all modules see the same temp paths
+    import src.common
+    monkeypatch.setattr(src.common, "ROOT", tmp_path)
+    monkeypatch.setattr(src.common, "PROCESSED", tmp_path / "processed")
+    monkeypatch.setattr(src.common, "RAW", tmp_path / "raw")
+    
+    # Monkeypatch the modules that already imported these values
+    import src.pipeline
+    import src.ingest
+    import src.prepare
+    import src.index
+    for mod in [src.pipeline, src.ingest, src.prepare, src.index]:
+        if hasattr(mod, "ROOT"):
+            monkeypatch.setattr(mod, "ROOT", tmp_path)
+        if hasattr(mod, "PROCESSED"):
+            monkeypatch.setattr(mod, "PROCESSED", tmp_path / "processed")
+        if hasattr(mod, "RAW"):
+            monkeypatch.setattr(mod, "RAW", tmp_path / "raw")
     
     def respond(status, content):
         def mock_fetch(client, url, retries):
