@@ -10,6 +10,16 @@
     "expected_text": [
       "14.611",
       "igualdade"
+    ],
+    "alternatives": [
+      {
+        "url": "https://www2.camara.leg.br/legin/fed/lei/2023/lei-14611-3-julho-2023-794396-publicacaooriginal-168317-pl.html",
+        "publisher": "Câmara dos Deputados",
+        "html_selector": ".textoNorma",
+        "version": "Publicação original; DOU 04/07/2023, seção 1, p. 1",
+        "justification": "Alternativa institucional explícita após resets de conexão no Planalto, verificados em 05/11/2026.",
+        "equivalence_notes": "Mesma norma identificada por número e data; versão editorial indicada. Equivalência byte a byte com o Planalto não verificada por indisponibilidade; não é certificação de vigência."
+      }
     ]
   },
   {
@@ -25,6 +35,16 @@
     "expected_text": [
       "461",
       "trabalho"
+    ],
+    "alternatives": [
+      {
+        "url": "https://www2.camara.leg.br/legin/fed/declei/1940-1949/decreto-lei-5452-1-maio-1943-415500-normaatualizada-pe.html",
+        "publisher": "Câmara dos Deputados",
+        "html_selector": null,
+        "version": "Texto atualizado pela Câmara; recorte do artigo 461, com notas de alteração",
+        "justification": "Alternativa institucional explícita após resets de conexão no Planalto, verificados em 05/11/2026.",
+        "equivalence_notes": "Mesma norma identificada por número e data; versão editorial indicada. Equivalência byte a byte com o Planalto não verificada por indisponibilidade; não é certificação de vigência."
+      }
     ]
   },
   {
@@ -38,6 +58,16 @@
     "expected_text": [
       "11.795",
       "igualdade"
+    ],
+    "alternatives": [
+      {
+        "url": "https://www2.camara.leg.br/legin/fed/decret/2023/decreto-11795-23-novembro-2023-794987-publicacaooriginal-170182-pe.html",
+        "publisher": "Câmara dos Deputados",
+        "html_selector": ".textoNorma",
+        "version": "Publicação original; DOU 23/11/2023, edição extra B, p. 6",
+        "justification": "Alternativa institucional explícita após resets de conexão no Planalto, verificados em 05/11/2026.",
+        "equivalence_notes": "Mesma norma identificada por número e data; versão editorial indicada. Equivalência byte a byte com o Planalto não verificada por indisponibilidade; não é certificação de vigência."
+      }
     ]
   },
   {

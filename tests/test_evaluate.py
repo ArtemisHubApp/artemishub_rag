@@ -34,3 +34,15 @@ def test_changed_evidence_excludes_stale_labels(document):
     assert check_evidence([case], [document])[0]["review_status"] == "verified"
     document["content_hash"] = "changed"
     assert check_evidence([case], [document])[0]["review_status"] == "stale_or_missing_evidence"
+
+
+def test_html_null_page_matches_chroma_empty_page():
+    class HtmlRetriever:
+        def retrieve(self, question, top_k=5):
+            return [{'chunk_id': 'html', 'metadata': {'document_id': 'law', 'page': ''}}]
+
+    cases = [{'id': 'html', 'question': 'fixture', 'review_status': 'verified',
+              'relevant_document_ids': ['law'], 'expected_evidence': [{'document_id': 'law', 'page': None}]}]
+    report = evaluate(cases, HtmlRetriever())
+    assert report['page_metrics']['page_recall_at_5'] == 1
+    assert report['page_metrics']['page_hit_rate_at_5'] == 1

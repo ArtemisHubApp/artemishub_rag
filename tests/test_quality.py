@@ -46,3 +46,15 @@ def test_chunk_integrity_and_eda(document):
     document["content_hash"] = digest("")
     with pytest.raises(ValueError, match="Missing content|short"):
         validate_documents([document])
+
+
+def test_non_destructive_quality_signals(document):
+    from src.eda import quality_signals
+
+    original = ('Linha longa repetida que exige avaliação editorial.\n' * 2) + 'Ligatura ﬁ e controle \b'
+    document['content'] = original
+    report = quality_signals([document], [])
+    signal = report['document_signals'][0]
+    assert signal['repeated_lines'] and signal['control_characters'] == ['U+0008']
+    assert signal['ligature_characters'] == 1
+    assert document['content'] == original
