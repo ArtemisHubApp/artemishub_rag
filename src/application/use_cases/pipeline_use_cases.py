@@ -4,8 +4,8 @@ from typing import Any
 from src.application.ports.repository import PipelineRepository
 from src.application.ports.vector_store import VectorStore
 from src.domain.entities import Chunk, Document
-from src.ingest import collect
 from src.index import build_index
+from src.ingest import collect
 from src.prepare import prepare
 
 LOG = logging.getLogger("pipeline_use_cases")

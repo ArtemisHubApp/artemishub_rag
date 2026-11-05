@@ -1,11 +1,10 @@
 import json
 from datetime import datetime
-from pathlib import Path
-from typing import List
 
 from src.application.ports.repository import PipelineRepository
-from src.domain.entities import Chunk, Document, PipelineState
 from src.common import PROCESSED, ROOT
+from src.domain.entities import Chunk, Document, PipelineState
+
 
 class FileRepository(PipelineRepository):
     def __init__(self, root=ROOT, processed=PROCESSED):
