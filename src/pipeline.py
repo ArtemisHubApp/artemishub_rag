@@ -1,82 +1,83 @@
-"""Collect, validate, profile and safely publish a document/index generation."""
 import argparse
-import datetime as dt
 import json
 import logging
 import time
 from pathlib import Path
 
-from src.common import PROCESSED, ROOT, digest, write_json, write_jsonl
-from src.eda import analyze
-from src.ingest import collect
-from src.prepare import prepare
-from src.quality import validate_chunks, validate_documents
+from src.common import ROOT, PROCESSED
+from src.adapters.outbound.file_repository import FileRepository
+from src.adapters.outbound.vector_store_adapter import SimpleVectorStoreAdapter
+from src.application.use_cases.pipeline_use_cases import IngestUseCase, PrepareUseCase, IndexUseCase
+from src.application.use_cases.orchestrator import OrchestratePipelineUseCase
 
 LOG = logging.getLogger("rag_pipeline")
 
-
 def run(sources_path=None, skip_index=False, allow_partial=False):
     start = time.monotonic()
-    stats = {"status": "failed", "source_outcomes": [], "index_published": False}
-    documents, chunks = [], []
-    reports = ROOT / "reports"
-    try:
-        sources_path = Path(sources_path or ROOT / "config" / "sources.json")
-        sources = json.loads(sources_path.read_text(encoding="utf-8"))
-        enabled = [s for s in sources if s.get("enabled", True)]
-        if not enabled:
-            raise ValueError("No enabled sources")
-        if len({s['id'] for s in sources}) != len(sources):
-            raise ValueError("Duplicate source id")
-        stats["enabled_sources"] = len(enabled)
-        documents = collect(sources, publish=False, outcomes=stats["source_outcomes"])
-        stats["collected_documents"] = len(documents)
-        failures = [o for o in stats["source_outcomes"] if o["status"] == "failed"]
-        partial = bool(failures)
-        if partial and not allow_partial:
-            raise RuntimeError("Source collection failed; refusing partial publication")
-        stats.update(validate_documents(documents))
-        chunks = prepare(documents)
-        stats.update(validate_chunks(documents, chunks))
-        stats["chunk_dataset_sha256"] = digest(json.dumps(chunks, sort_keys=True, ensure_ascii=False))
-        if not skip_index:
-            from src.index import build_index
-            stats["index"] = build_index(chunks, documents, partial=partial)
-            stats["index_published"] = True
-        # Convenience exports; queries always use the atomically published index snapshot.
-        write_jsonl(PROCESSED / "documents.jsonl", documents)
-        write_jsonl(PROCESSED / "chunks.jsonl", chunks)
-        stats["status"] = "partial" if partial else "success"
-        return stats
-    except Exception as exc:
-        stats["error_type"] = type(exc).__name__
-        if isinstance(exc, (ValueError, RuntimeError)):
-            stats["reason"] = str(exc)
-        raise
-    finally:
-        stats["duration_seconds"] = round(time.monotonic() - start, 2)
-        stats["finished_at_utc"] = dt.datetime.now(dt.UTC).isoformat()
-        write_json(reports / "latest_run.json", stats)
-        write_json(reports / "eda.json", analyze(documents, chunks, stats["source_outcomes"]))
-        LOG.info("pipeline_result %s", json.dumps(stats, ensure_ascii=False))
-
+    sources_path = Path(sources_path or ROOT / "config" / "sources.json")
+    sources = json.loads(sources_path.read_text(encoding="utf-8"))
+    enabled = [s for s in sources if s.get("enabled", True)]
+    
+    # Dependency Injection
+    repo = FileRepository(root=ROOT, processed=PROCESSED)
+    vector_store = SimpleVectorStoreAdapter()
+    
+    ingest_uc = IngestUseCase(repo, strict=not allow_partial)
+    prepare_uc = PrepareUseCase(repo)
+    index_uc = IndexUseCase(vector_store)
+    
+    orchestrator = OrchestratePipelineUseCase(repo, ingest_uc, prepare_uc, index_uc)
+    
+    final_state = orchestrator.execute(enabled)
+    
+    # Collect extended stats for compatibility with Camila's requirements and tests
+    docs = repo.load_documents()
+    chunks = repo.load_chunks()
+    
+    duration = round(time.monotonic() - start, 2)
+    
+    stats = {
+        "status": "success" if final_state.status == "COMPLETED" else "failed",
+        "stage": final_state.current_stage,
+        "duration_seconds": duration,
+        "documents": len(docs),
+        "sources": len({d.document_id for d in docs}),
+        "chunks": len(chunks),
+        "enabled_sources": len(enabled),
+        "index_published": final_state.status == "COMPLETED"
+    }
+    
+    # Write report for backward compatibility (tests)
+    reports_dir = ROOT / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    (reports_dir / "latest_run.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
+    
+    LOG.info(f"Pipeline finished in {duration}s. Final State: {final_state.status}")
+    
+    return stats
 
 def main():
-    parser = argparse.ArgumentParser(description="End-to-end document-to-index pipeline")
+    parser = argparse.ArgumentParser(description="Orchestrated document-to-index pipeline")
     parser.add_argument("--sources", help="Path to sources JSON manifest")
     parser.add_argument("--skip-index", action="store_true", help="Validate dataset without embeddings")
     parser.add_argument("--allow-partial", action="store_true", help="Diagnostic partial index (queries require explicit opt-in)")
     args = parser.parse_args()
+    
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
     logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
         result = run(args.sources, args.skip_index, args.allow_partial)
         print(json.dumps(result, indent=2, ensure_ascii=False))
-        raise SystemExit(2 if result["status"] == "partial" else 0)
+        # Use the status code convention from Camila's PR
+        if result["status"] == "partial":
+            raise SystemExit(2)
+        raise SystemExit(0)
     except (OSError, ValueError, RuntimeError):
         LOG.error("Pipeline failed; inspect reports/latest_run.json")
         raise SystemExit(1) from None
-
+    except Exception:
+        LOG.exception("Unexpected pipeline failure")
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     main()

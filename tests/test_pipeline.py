@@ -5,7 +5,7 @@ import pytest
 
 from src import ingest, pipeline
 from src.common import load_jsonl
-from src.pipeline import validate_documents
+from src.common import validate_documents
 
 
 def test_rejects_empty_documents():
