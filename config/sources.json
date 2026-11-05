@@ -6,7 +6,11 @@
     "url": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14611.htm",
     "topic": "igualdade_salarial",
     "kind": "html",
-    "enabled": true
+    "enabled": true,
+    "expected_text": [
+      "14.611",
+      "igualdade"
+    ]
   },
   {
     "id": "clt_art_461",
@@ -15,8 +19,13 @@
     "url": "https://www.planalto.gov.br/ccivil_03/decreto-lei/del5452.htm",
     "topic": "equiparacao_salarial",
     "kind": "html",
-    "enabled": false,
-    "note": "A página contém toda a CLT. Exige extração específica do artigo 461 antes de ativar."
+    "enabled": true,
+    "note": "Extração restrita ao artigo 461, excluindo marcações HTML de texto revogado.",
+    "article": "461",
+    "expected_text": [
+      "461",
+      "trabalho"
+    ]
   },
   {
     "id": "decreto_11795_2023",
@@ -25,7 +34,11 @@
     "url": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/Decreto/D11795.htm",
     "topic": "igualdade_salarial",
     "kind": "html",
-    "enabled": true
+    "enabled": true,
+    "expected_text": [
+      "11.795",
+      "igualdade"
+    ]
   },
   {
     "id": "cartilha_igualdade_salarial",
@@ -34,7 +47,11 @@
     "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/cartilha-tira-duvidas-lei-da-igualdade-salarial-e-de-criterios-remuneratorios-entre-mulheres-e-homens_defeso.pdf/@@display-file/file",
     "topic": "igualdade_salarial",
     "kind": "pdf",
-    "enabled": true
+    "enabled": true,
+    "expected_text": [
+      "14.611",
+      "igualdade salarial"
+    ]
   },
   {
     "id": "estatisticas_genero_ibge",
@@ -43,6 +60,10 @@
     "url": "https://biblioteca.ibge.gov.br/visualizacao/livros/liv102066_informativo.pdf",
     "topic": "estatisticas_genero",
     "kind": "pdf",
-    "enabled": true
+    "enabled": true,
+    "expected_text": [
+      "Estatísticas de Gênero",
+      "IBGE"
+    ]
   }
 ]

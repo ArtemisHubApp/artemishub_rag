@@ -13,14 +13,14 @@ def test_rejects_empty_documents():
         validate_documents([])
 
 
-def test_rejects_missing_provenance():
+def test_rejects_missing_provenance(document):
+    del document["source_url"]
     with pytest.raises(ValueError, match="source_url"):
-        validate_documents([{"document_id": "x", "title": "t", "content": "a" * 120, "content_sha256": "x"}])
+        validate_documents([document])
 
 
-def test_accepts_valid_document():
-    doc = {"document_id": "x", "source_url": "https://example.org", "title": "t", "content": "a" * 120, "content_sha256": "x"}
-    assert validate_documents([doc]) == {"documents": 1, "sources": 1}
+def test_accepts_valid_document(document):
+    assert validate_documents([document]) == {"documents": 1, "sources": 1}
 
 
 @pytest.fixture
@@ -68,3 +68,48 @@ def test_failed_collection_preserves_published_dataset(local_pipeline):
         pipeline.run(manifest, skip_index=True)
     assert previous.read_text() == "previous dataset"
     assert not (processed / "chunks.jsonl").exists()
+
+
+def test_full_pipeline_with_real_chroma(local_pipeline, monkeypatch):
+    import numpy as np
+
+    from src import index
+    from src.query import Retriever
+
+    root, manifest, respond = local_pipeline
+    respond(200, "<main>" + "Evidência sintética de integração local. " * 50 + "</main>")
+
+    class Encoder:
+        def encode(self, texts, normalize_embeddings=True):
+            return np.tile(np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(texts), 1))
+
+    monkeypatch.setattr(index, "ROOT", root)
+    monkeypatch.setattr(index, "load_model", lambda *args: Encoder())
+    result = pipeline.run(manifest)
+    assert result["status"] == "success" and result["index_published"]
+    assert pipeline.run(manifest)["index"]["embeddings_generated"] == 0
+    hits = Retriever(path=root / ".chroma", model=Encoder()).retrieve("fixture")
+    assert hits and hits[0]["metadata"]["document_id"] == "example"
+
+
+def test_wrong_document_markers_fail_closed(local_pipeline):
+    root, manifest, respond = local_pipeline
+    sources = json.loads(manifest.read_text())
+    sources[0]["expected_text"] = ["Mandatory expected document header"]
+    manifest.write_text(json.dumps(sources))
+    respond(200, "<main>" + "Unrelated error page content. " * 50 + "</main>")
+    with pytest.raises(RuntimeError, match="refusing partial"):
+        pipeline.run(manifest, skip_index=True)
+    report = json.loads((root / "reports" / "latest_run.json").read_text())
+    assert report["source_outcomes"][0]["status"] == "failed"
+    assert "marker missing" in report["source_outcomes"][0]["reason"]
+    assert not (root / "processed" / "documents.jsonl").exists()
+
+
+@pytest.mark.parametrize("status,expected", [("success", 0), ("partial", 2)])
+def test_cli_exit_codes(monkeypatch, status, expected):
+    monkeypatch.setattr("sys.argv", ["pipeline"])
+    monkeypatch.setattr(pipeline, "run", lambda *args: {"status": status})
+    with pytest.raises(SystemExit) as error:
+        pipeline.main()
+    assert error.value.code == expected
