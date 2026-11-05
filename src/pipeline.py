@@ -4,11 +4,15 @@ import logging
 import time
 from pathlib import Path
 
-from src.common import ROOT, PROCESSED
 from src.adapters.outbound.file_repository import FileRepository
 from src.adapters.outbound.vector_store_adapter import SimpleVectorStoreAdapter
-from src.application.use_cases.pipeline_use_cases import IngestUseCase, PrepareUseCase, IndexUseCase
 from src.application.use_cases.orchestrator import OrchestratePipelineUseCase
+from src.application.use_cases.pipeline_use_cases import (
+    IndexUseCase,
+    IngestUseCase,
+    PrepareUseCase,
+)
+from src.common import PROCESSED, ROOT
 
 LOG = logging.getLogger("rag_pipeline")
 
@@ -45,8 +49,6 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
             "stage": final_state.current_stage,
         })
     except Exception as e:
-        # We catch it here to ensure stats are written, then re-raise
-        # Note: state might be updated inside orchestrator.execute before failure
         state = repo.get_state()
         stats["stage"] = state.current_stage
         raise e
@@ -62,7 +64,6 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
             "chunks": len(chunks),
         })
         
-        # Write report for backward compatibility (tests)
         reports_dir = ROOT / "reports"
         reports_dir.mkdir(exist_ok=True)
         (reports_dir / "latest_run.json").write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -91,7 +92,7 @@ def main():
         raise SystemExit(1) from None
     except Exception:
         LOG.exception("Unexpected pipeline failure")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
 if __name__ == "__main__":
     main()

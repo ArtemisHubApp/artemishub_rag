@@ -1,11 +1,12 @@
-from typing import List
 import logging
-from src.domain.entities import Document, Chunk, PipelineState
+from typing import Any
+
 from src.application.ports.repository import PipelineRepository
 from src.application.ports.vector_store import VectorStore
+from src.domain.entities import Chunk, Document
 from src.ingest import collect
-from src.prepare import prepare
 from src.index import build_index
+from src.prepare import prepare
 
 LOG = logging.getLogger("pipeline_use_cases")
 
@@ -14,7 +15,7 @@ class IngestUseCase:
         self.repo = repo
         self.strict = strict
 
-    def execute(self, sources):
+    def execute(self, sources: list[dict[str, Any]]):
         # collect returns a list of dicts in the original code
         docs_data = collect(sources, strict=self.strict, publish=False)
         
@@ -60,7 +61,7 @@ class IndexUseCase:
     def __init__(self, vector_store: VectorStore):
         self.vector_store = vector_store
 
-    def execute(self, chunks: List[Chunk]):
+    def execute(self, chunks: list[Chunk]):
         # build_index in original code might not take chunks as input, 
         # it might read from file. We need to adapt it.
         # For now, we call the original build_index.

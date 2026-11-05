@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
 from datetime import datetime
 
 @dataclass
@@ -9,7 +8,7 @@ class Document:
     title: str
     content: str
     content_sha256: str
-    organization: Optional[str] = None
+    organization: str | None = None
     metadata: dict = field(default_factory=dict)
 
 @dataclass
@@ -18,7 +17,7 @@ class Chunk:
     source_url: str
     text: str
     content_sha256: str
-    chunk_id: Optional[str] = None
+    chunk_id: str | None = None
     metadata: dict = field(default_factory=dict)
 
 @dataclass
@@ -26,4 +25,4 @@ class PipelineState:
     current_stage: str  # 'INGEST', 'PREPARE', 'INDEX'
     status: str         # 'PENDING', 'RUNNING', 'COMPLETED', 'FAILED'
     last_updated: str
-    error_message: Optional[str] = None
+    error_message: str | None = None
