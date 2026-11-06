@@ -139,7 +139,7 @@ Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nu
 
 ## 👩‍💻 Equipe
 
-Desenvolvido pelo **Grupo 11**.
+Desenvolvido pelo **Grupo 11**. Todas somos **AI Builders**, cada uma com uma frente principal de atuação:
 
 <table>
   <tr>
@@ -148,38 +148,31 @@ Desenvolvido pelo **Grupo 11**.
         <img src="https://github.com/AmandaElisa.png" width="90" alt="Amanda"/><br/>
         <b>Amanda</b>
       </a><br/>
-      <sub>Arquitetura de Software e DevOps</sub>
+      <sub>Arquitetura de Software · DevOps · Frontend</sub>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/anajbsouza">
         <img src="https://github.com/anajbsouza.png" width="90" alt="Ana Julia"/><br/>
         <b>Ana Julia</b>
       </a><br/>
-      <sub>Avaliação e Qualidade do RAG</sub>
+      <sub>Ciência de Dados · Engenharia de Dados</sub>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/CamilaSilvaC">
         <img src="https://github.com/CamilaSilvaC.png" width="90" alt="Camila"/><br/>
         <b>Camila</b>
       </a><br/>
-      <sub>Engenharia de Dados e Pipeline RAG</sub>
+      <sub>Engenharia de Dados · DevOps</sub>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/eduardaoliveirazorg-jpg">
         <img src="https://github.com/eduardaoliveirazorg-jpg.png" width="90" alt="Eduarda"/><br/>
         <b>Eduarda</b>
       </a><br/>
-      <sub>PAPEL_DA_EDUARDA</sub>
+      <sub>Ciência de Dados · Arquitetura de Software</sub>
     </td>
   </tr>
 </table>
-
-| Integrante | Papel | Principais contribuições |
-|---|---|---|
-| Amanda | Arquitetura de Software e DevOps | Camada de orquestração (domain, application, adapters), CI com GitHub Actions e uv, Dockerfile, fluxo SDD |
-| Ana Julia | Avaliação e Qualidade do RAG | Conjunto holdout de avaliação, opção `--questions`, integração das branches |
-| Camila | Engenharia de Dados e Pipeline RAG | Pipeline de ingestão, chunking, busca híbrida e relatório de validação |
-| Eduarda | PAPEL_DA_EDUARDA | CONTRIBUICOES_DA_EDUARDA |
 
 ## 🤝 Como contribuir
 
