@@ -26,12 +26,6 @@ Desenvolvido pelo **Grupo 11**, com atuação em Inteligência Artificial, Ciên
 <table>
   <tr>
     <td align="center">
-      <a href="https://github.com/CamilaSilvaC">
-        <img src="https://github.com/CamilaSilvaC.png" width="90" alt="Camila"/><br/>
-        <b>Camila</b>
-      </a>
-    </td>
-    <td align="center">
       <a href="https://github.com/AmandaElisa">
         <img src="https://github.com/AmandaElisa.png" width="90" alt="Amanda"/><br/>
         <b>Amanda</b>
@@ -41,6 +35,12 @@ Desenvolvido pelo **Grupo 11**, com atuação em Inteligência Artificial, Ciên
       <a href="https://github.com/anajbsouza">
         <img src="https://github.com/anajbsouza.png" width="90" alt="Ana Julia"/><br/>
         <b>Ana Julia</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/CamilaSilvaC">
+        <img src="https://github.com/CamilaSilvaC.png" width="90" alt="Camila"/><br/>
+        <b>Camila</b>
       </a>
     </td>
     <td align="center">

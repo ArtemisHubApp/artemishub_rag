@@ -1,5 +1,7 @@
 """Reproducible dataset profile, with no notebook or network dependency."""
 import json
+import re
+import unicodedata
 from collections import Counter
 from statistics import mean, median
 
@@ -10,6 +12,36 @@ from src.quality import DOCUMENT_FIELDS
 def distribution(values):
     return {"count": len(values), "min": min(values), "max": max(values),
             "mean": round(mean(values), 2), "median": median(values)} if values else {"count": 0}
+
+
+def quality_signals(documents, chunks):
+    """Non-destructive hints requiring inspection, never automatic text removal."""
+    findings = []
+    for doc in documents:
+        text = doc.get("content", "")
+        lines = [" ".join(unicodedata.normalize("NFKC", line).split()) for line in text.splitlines()]
+        repeated = {line: count for line, count in Counter(lines).items() if len(line) >= 35 and count > 1}
+        controls = sorted({f"U+{ord(c):04X}" for c in text if unicodedata.category(c) == "Cc" and c not in "\n\r\t"})
+        ligatures = sum(0xFB00 <= ord(c) <= 0xFB06 for c in text)
+        numeric_lines = sum(bool(re.fullmatch(r"[\d.,% ]+", line)) for line in lines if line)
+        if repeated or controls or ligatures or numeric_lines > 10:
+            findings.append({"document_id": doc["document_id"], "page": doc.get("page"),
+                             "repeated_lines": repeated, "control_characters": controls,
+                             "ligature_characters": ligatures, "numeric_lines": numeric_lines})
+    by_locator = {(d["document_id"], d.get("page")): d["content"] for d in documents}
+    split_words = []
+    for chunk in chunks:
+        content = by_locator.get((chunk["document_id"], chunk.get("page")), "")
+        text = chunk.get("text", "")
+        position = content.find(text) if text else -1
+        if position < 0:
+            continue
+        end = position + len(text)
+        if ((position and content[position - 1].isalnum() and text[0].isalnum())
+            or (end < len(content) and content[end].isalnum() and text[-1].isalnum())):
+            split_words.append(chunk["chunk_id"])
+    return {"document_signals": findings, "chunks_with_possible_split_words": split_words,
+            "policy": "Warnings only; repeated text, table numbers and ligatures are preserved. Boundary detection uses first exact occurrence."}
 
 
 def analyze(documents, chunks, outcomes=None):
@@ -32,6 +64,7 @@ def analyze(documents, chunks, outcomes=None):
                                    if documents else 0) for key in DOCUMENT_FIELDS},
         "source_success_percent": round(100 * successful / enabled, 2) if enabled else None,
         "source_outcomes": outcomes or [],
+        "quality_signals": quality_signals(documents, chunks),
         "note": "Success percentage is per configured source; unavailable page counts are unknown.",
     }
 

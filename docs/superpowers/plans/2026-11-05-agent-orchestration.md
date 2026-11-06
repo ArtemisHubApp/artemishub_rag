@@ -1,23 +1,29 @@
-# Plan: Agent Orchestration Layer
+# Plan: Agent Orchestration Layer for Projeto Artemis
 
-## Context
-The current pipeline is a linear sequence of functions. To improve resilience, observability, and flexibility, we need an orchestration layer that coordinates the RAG pipeline stages.
+## Goal
+Transform the linear RAG pipeline into an orchestrated system of agents/use-cases, adapting the architecture from `checa-ai`.
 
-## Goals
-1. **Decouple Coordination from Logic**: Separate the "how to run the pipeline" from "how to ingest/index".
-2. **State Management**: Track the pipeline state (PENDING, RUNNING, COMPLETED, FAILED) for each stage.
-3. **Observability**: Detailed logging and reporting of each stage's outcome.
-4. **Flexibility**: Allow skipping stages (e.g., `skip_index`) or partial runs without breaking the flow.
+## Proposed Architecture (Hexagonal)
+- **Domain**: Define `Document`, `Chunk`, and `PipelineState` entities.
+- **Application**:
+    - `IngestUseCase`: Wraps `src.ingest.collect`.
+    - `PrepareUseCase`: Wraps `src.prepare.prepare`.
+    - `IndexUseCase`: Wraps `src.index.build_index`.
+    - `OrchestratePipelineUseCase`: The "Brain" that coordinates the flow, handles checkpoints, and manages failures.
+- **Adapters**:
+    - `FileRepository`: Handles reading/writing JSONL and reports.
+    - `VectorStoreAdapter`: Wraps the indexing logic.
+    - `CLIAdapter`: The entry point (`main.py`).
 
-## Proposed Architecture
-- **PipelineOrchestrator**: A coordinator class that:
-    - Loads the source manifest.
-    - Executes stages in order: Ingest $\rightarrow$ Prepare $\rightarrow$ Index.
-    - Manages a `PipelineState` object to track progress.
-    - Handles errors by recording the failure stage and stopping execution.
-- **Stage Interface**: Define a consistent way for stages to report their status and stats.
+## SDD Phases
+1. **Spec**: Define the interfaces for the UseCases and the Orchestrator.
+2. **Domain**: Implement core entities.
+3. **Adapters**: Create the repository and store adapters.
+4. **Application**: Implement the UseCases and the Orchestrator.
+5. **Integration**: Replace the current `src/pipeline.py` logic with the new Orchestrator.
+6. **Verification**: Run tests to ensure parity with the original linear pipeline.
 
 ## Success Criteria
-- `pipeline.run()` uses the orchestrator.
-- A `latest_run.json` report is generated with detailed stage-by-stage metrics.
-- Pipeline can be run partially (e.g., just ingest and prepare) while maintaining data integrity.
+- Pipeline can resume from a failed stage using checkpoints.
+- Code follows hexagonal architecture (separation of concerns).
+- `src/pipeline.py` becomes a thin wrapper around the Orchestrator.

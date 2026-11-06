@@ -1,26 +1,43 @@
 # Spec: Agent Orchestration Layer
 
-## Functional Requirements
-1. **Sequential Execution**: The orchestrator must execute Ingest $\rightarrow$ Prepare $\rightarrow$ Index.
-2. **State Persistence**: The current stage and status must be persisted to `reports/latest_run.json`.
-3. **Partial Publication**: Support `--allow-partial` to allow the pipeline to complete even if some sources fail.
-4. **Index Skipping**: Support `--skip-index` to validate the dataset without generating embeddings.
+## 1. Domain Entities
+- **Document**: dataclass (id, url, title, content, sha256)
+- **Chunk**: dataclass (doc_id, content, embedding_id, metadata)
+- **PipelineState**: dataclass (current_stage, last_successful_stage, timestamp, status)
 
-## Technical Specification
-- **Class `PipelineOrchestrator`**:
-    - `execute(sources)`: Main entry point.
-    - `_run_stage(stage_name, func, \*args)`: Wrapper to handle logging, timing, and state updates.
-- **State Model**:
-    - `status`: "success" | "failed" | "partial"
-    - `stage`: "INGEST" | "PREPARE" | "INDEX" | "COMPLETED"
-    - `duration_seconds`: float
-- **Error Handling**:
-    - Catch all exceptions in `_run_stage`.
-    - Update state to "failed" and current stage.
-    - Re-raise exception to be handled by `pipeline.run()`.
+## 2. Application Ports (Interfaces)
+- **Repository Interface**:
+    - `save_documents(docs: List[Document])`
+    - `load_documents() -> List[Document]`
+    - `save_chunks(chunks: List[Chunk])`
+    - `load_chunks() -> List[Chunk]`
+    - `update_state(state: PipelineState)`
+    - `get_state() -> PipelineState`
+- **VectorStore Interface**:
+    - `index_chunks(chunks: List[Chunk]) -> bool`
+- **PipelineStage Interface**:
+    - `execute(input_data) -> output_data`
 
-## Metrics to Track
-- Number of documents collected.
-- Number of chunks produced.
-- Index publication status.
-- Time taken per stage.
+## 3. Application Use Cases
+- **IngestUseCase**:
+    - Inputs: Sources manifest
+    - Logic: `collect()` -> `Repository.save_documents()`
+- **PrepareUseCase**:
+    - Inputs: `Repository.load_documents()`
+    - Logic: `prepare()` -> `Repository.save_chunks()`
+- **IndexUseCase**:
+    - Inputs: `Repository.load_chunks()`
+    - Logic: `VectorStore.index_chunks()`
+- **OrchestratePipelineUseCase**:
+    - Logic:
+        1. Load `PipelineState`.
+        2. If state is 'IDLE' or 'FAILED' at INGEST -> Run `IngestUseCase`.
+        3. If state is 'INGESTED' -> Run `PrepareUseCase`.
+        4. If state is 'PREPARED' -> Run `IndexUseCase`.
+        5. Update state to 'COMPLETED'.
+        6. Handle exceptions by marking state as 'FAILED'.
+
+## 4. Adapters
+- **FileRepository**: Implements Repository Interface using JSONL and `reports/state.json`.
+- **ChromaDBAdapter** (or similar): Implements VectorStore Interface.
+- **CLIRunner**: Implements the main entry point.

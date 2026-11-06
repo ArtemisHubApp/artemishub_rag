@@ -64,3 +64,17 @@ def embedding_revision(model_name=None):
     return os.getenv("EMBEDDING_REVISION") or (
         "e8f8c211226b894fcb81acc59f3b34ba3efd5f42" if (model_name or embedding_model()) == default_model else None
     )
+
+
+def validate_documents(documents, minimum_chars=100):
+    if not documents:
+        raise ValueError("No documents extracted")
+    for doc in documents:
+        # Handle both dicts and Document entities
+        data = doc.__dict__ if hasattr(doc, '__dict__') else doc
+        for key in ("document_id", "source_url", "title", "content", "content_sha256"):
+            if not data.get(key):
+                raise ValueError(f"Missing {key} in document {data.get('document_id')}")
+        if len(data["content"].strip()) < minimum_chars:
+            raise ValueError(f"Document section too short: {data.get('document_id')} page {data.get('page')}")
+    return {"documents": len(documents), "sources": len({d.document_id if hasattr(d, 'document_id') else d.get('document_id') for d in documents})}

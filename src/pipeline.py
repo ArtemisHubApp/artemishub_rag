@@ -15,9 +15,10 @@ from src.quality import validate_chunks, validate_documents
 LOG = logging.getLogger("rag_pipeline")
 
 
-def run(sources_path=None, skip_index=False, allow_partial=False):
+def run(sources_path=None, skip_index=False, allow_partial=False, chunk_size=600, overlap=100):
     start = time.monotonic()
     stats = {"status": "failed", "source_outcomes": [], "index_published": False}
+    stats["chunking"] = {"chunk_size": chunk_size, "overlap": overlap, "unit": "characters"}
     documents, chunks = [], []
     reports = ROOT / "reports"
     try:
@@ -36,8 +37,8 @@ def run(sources_path=None, skip_index=False, allow_partial=False):
         if partial and not allow_partial:
             raise RuntimeError("Source collection failed; refusing partial publication")
         stats.update(validate_documents(documents))
-        chunks = prepare(documents)
-        stats.update(validate_chunks(documents, chunks))
+        chunks = prepare(documents, chunk_size=chunk_size, overlap=overlap)
+        stats.update(validate_chunks(documents, chunks, max_chars=chunk_size))
         stats["chunk_dataset_sha256"] = digest(json.dumps(chunks, sort_keys=True, ensure_ascii=False))
         if not skip_index:
             from src.index import build_index
@@ -66,11 +67,13 @@ def main():
     parser.add_argument("--sources", help="Path to sources JSON manifest")
     parser.add_argument("--skip-index", action="store_true", help="Validate dataset without embeddings")
     parser.add_argument("--allow-partial", action="store_true", help="Diagnostic partial index (queries require explicit opt-in)")
+    parser.add_argument("--chunk-size", type=int, default=600, help="Maximum characters per chunk")
+    parser.add_argument("--overlap", type=int, default=100, help="Overlap in characters")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
     logging.getLogger("httpx").setLevel(logging.WARNING)
     try:
-        result = run(args.sources, args.skip_index, args.allow_partial)
+        result = run(args.sources, args.skip_index, args.allow_partial, args.chunk_size, args.overlap)
         print(json.dumps(result, indent=2, ensure_ascii=False))
         raise SystemExit(2 if result["status"] == "partial" else 0)
     except (OSError, ValueError, RuntimeError):
