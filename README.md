@@ -148,7 +148,7 @@ Desenvolvido pelo **Grupo 11**. Todas somos **AI Builders**, cada uma com uma fr
         <img src="https://github.com/AmandaElisa.png" width="90" alt="Amanda"/><br/>
         <b>Amanda</b>
       </a><br/>
-      <sub>Arquitetura de Software · DevOps · Frontend</sub>
+      <sub>Fullstack</sub>
     </td>
     <td align="center" width="25%">
       <a href="https://github.com/anajbsouza">
