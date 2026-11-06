@@ -1,22 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import List
-from src.domain.entities import Document, Chunk, PipelineState
+
+from src.domain.entities import Chunk, Document, PipelineState
+
 
 class PipelineRepository(ABC):
     @abstractmethod
-    def save_documents(self, docs: List[Document]):
+    def save_documents(self, docs: list[Document]):
         pass
 
     @abstractmethod
-    def load_documents(self) -> List[Document]:
+    def load_documents(self) -> list[Document]:
         pass
 
     @abstractmethod
-    def save_chunks(self, chunks: List[Chunk]):
+    def save_chunks(self, chunks: list[Chunk]):
         pass
 
     @abstractmethod
-    def load_chunks(self) -> List[Chunk]:
+    def load_chunks(self) -> list[Chunk]:
         pass
 
     @abstractmethod

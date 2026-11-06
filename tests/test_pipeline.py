@@ -1,8 +1,10 @@
 import json
+
 import pytest
-from pathlib import Path
+
 from src import pipeline
 from src.common import load_jsonl
+
 
 @pytest.fixture
 def local_pipeline(tmp_path, monkeypatch):
@@ -72,8 +74,9 @@ def test_full_pipeline_with_real_chroma(local_pipeline, monkeypatch):
     root, manifest, respond = local_pipeline
     respond(200, "<main>" + "Evidência sintética de integração local. " * 50 + "</main>")
 
-    import src.index
     import numpy as np
+
+    import src.index
     class Encoder:
         def encode(self, texts, normalize_embeddings=True):
             return np.tile(np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(texts), 1))
