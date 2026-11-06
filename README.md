@@ -21,7 +21,7 @@ Uma plataforma inteligente que ofereça:
 
 ## 👩‍💻 Nossa equipe
 
-Desenvolvido pelo **Grupo 11**, com atuação em Inteligência Artificial, Ciência de Dados, Engenharia de Dados, Arquitetura de Software e DevOps.
+Desenvolvido pelo **Grupo 11**. Todas somos **AI Builders**, cada uma com uma frente principal de atuação:
 
 <table>
   <tr>
@@ -30,24 +30,28 @@ Desenvolvido pelo **Grupo 11**, com atuação em Inteligência Artificial, Ciên
         <img src="https://github.com/AmandaElisa.png" width="90" alt="Amanda"/><br/>
         <b>Amanda</b>
       </a>
+      <br/><sub>Arquitetura de Software · DevOps · Frontend</sub>
     </td>
     <td align="center">
       <a href="https://github.com/anajbsouza">
         <img src="https://github.com/anajbsouza.png" width="90" alt="Ana Julia"/><br/>
         <b>Ana Julia</b>
       </a>
+      <br/><sub>Ciência de Dados · Engenharia de Dados</sub>
     </td>
     <td align="center">
       <a href="https://github.com/CamilaSilvaC">
         <img src="https://github.com/CamilaSilvaC.png" width="90" alt="Camila"/><br/>
         <b>Camila</b>
       </a>
+      <br/><sub>Engenharia de Dados · DevOps</sub>
     </td>
     <td align="center">
       <a href="https://github.com/eduardaoliveirazorg-jpg">
         <img src="https://github.com/eduardaoliveirazorg-jpg.png" width="90" alt="Eduarda"/><br/>
         <b>Eduarda</b>
       </a>
+      <br/><sub>Ciência de Dados · Arquitetura de Software</sub>
     </td>
   </tr>
 </table>
