@@ -83,8 +83,10 @@ def main():
     parser.add_argument("--allow-partial", action="store_true")
     parser.add_argument("--retrieval", choices=("dense", "pages", "hybrid"), default="hybrid")
     parser.add_argument("--output", help="Report path; defaults to reports/retrieval_evaluation.json")
+    parser.add_argument("--questions", default=str(ROOT / "evaluation" / "questions.jsonl"),
+                        help="Arquivo JSONL de perguntas a avaliar")
     args = parser.parse_args()
-    cases = load_jsonl(ROOT / "evaluation" / "questions.jsonl")
+    cases = load_jsonl(args.questions)
     retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
     snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
     cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"))
