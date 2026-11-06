@@ -30,7 +30,7 @@ Desenvolvido pelo **Grupo 11**. Todas somos **AI Builders**, cada uma com uma fr
         <img src="https://github.com/AmandaElisa.png" width="90" alt="Amanda"/><br/>
         <b>Amanda</b>
       </a>
-      <br/><sub>Software Architect · DevOps · Frontend</sub>
+      <br/><sub>Arquitetura de Software · DevOps · Frontend</sub>
     </td>
     <td align="center">
       <a href="https://github.com/anajbsouza">
@@ -51,7 +51,7 @@ Desenvolvido pelo **Grupo 11**. Todas somos **AI Builders**, cada uma com uma fr
         <img src="https://github.com/eduardaoliveirazorg-jpg.png" width="90" alt="Eduarda"/><br/>
         <b>Eduarda</b>
       </a>
-      <br/><sub>Ciência de Dados · Software Architect</sub>
+      <br/><sub>Ciência de Dados · Arquitetura de Software</sub>
     </td>
   </tr>
 </table>
