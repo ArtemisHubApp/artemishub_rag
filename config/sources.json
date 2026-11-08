@@ -279,5 +279,18 @@
     ],
     "version": "Texto do Datalegis (ANTT), que cita D.O.U. de 27/11/2023, seção 1; não substitui a publicação oficial",
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Texto completo (arts. 1º a 12) hospedado em base de legislação do governo federal; link do D.O.U. em in.gov.br não encontrado. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "inep_resumo_tecnico_censo_superior_2024",
+    "title": "Resumo Técnico do Censo da Educação Superior 2024",
+    "organization": "INEP",
+    "url": "https://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_superior/resumo_tecnico_do_censo_da_educacao_superior_2024.pdf",
+    "topic": "educacao_superior",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "Censo da Educação Superior"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Documento longo e com muitas tabelas; conferir em reports/eda.json se passa a dominar o índice. Ver docs/base_de_conhecimento.md."
   }
 ]

@@ -1,6 +1,6 @@
 # Base de conhecimento do RAG Artemis
 
-A base hoje tem **5 fontes ativas** (33 seções, 221 chunks). A entrega do Segundo Desafio pede **no mínimo 20 documentos-fonte**, então este documento lista as fontes ativas, as **14 candidatas já cadastradas** em [`config/sources.json`](../config/sources.json) com `"enabled": false` e 1 que ainda precisa de link oficial. Com tudo isso, a base chega a 20 fontes.
+A base hoje tem **5 fontes ativas** (33 seções, 221 chunks). A entrega do Segundo Desafio pede **no mínimo 20 documentos-fonte**, então este documento lista as fontes ativas, as **15 candidatas já cadastradas** em [`config/sources.json`](../config/sources.json) com `"enabled": false` e 1 opcional que ainda precisa de link oficial. Com as 15 candidatas, a base chega a 20 fontes.
 
 Todas as candidatas vieram dos documentos de pesquisa do grupo (First Day, Pesquisa de empoderamento feminino, PDR de 30/10 e lista de Datasets).
 
@@ -23,7 +23,7 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 | `cartilha_igualdade_salarial` | Cartilha Tira-Dúvidas da Lei da Igualdade Salarial | Ministério das Mulheres e MTE | PDF | igualdade salarial |
 | `estatisticas_genero_ibge` | Estatísticas de Gênero, 3ª edição | IBGE | PDF | estatísticas de gênero |
 
-## Candidatas cadastradas e desabilitadas (14)
+## Candidatas cadastradas e desabilitadas (15)
 
 ### Prioridade 1: oficiais e direto no tema (11)
 
@@ -41,25 +41,26 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 | `portaria_mte_3714_2023` | [Portaria MTE nº 3.714/2023](https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=detalharAto&tipo=POR&numeroAto=00003714&seqAto=000&valorAno=2023&orgao=MTE&nomeTitulo=codigos&cod_modulo=420&cod_menu=7145) | MTE (texto no Datalegis/ANTT; D.O.U. de 27/11/2023, seção 1) | HTML | procedimentos do relatório de transparência e da fiscalização |
 | `onu_mulheres_weps` | [Princípios de Empoderamento das Mulheres](https://www.onumulheres.org.br/wp-content/uploads/2016/04/cartilha_ONU_Mulheres_Nov2017_digital.pdf) | ONU Mulheres e Pacto Global | PDF | boas práticas de igualdade nas organizações |
 
-### Prioridade 2: contexto de carreira e STEM (3)
+### Prioridade 2: contexto de carreira e STEM (4)
 
 | id | Fonte | Órgão | Formato | Para que serve |
 | --- | --- | --- | --- | --- |
 | `ibge_educa_mulheres` | [As mulheres do Brasil](https://educa.ibge.gov.br/jovens/materias-especiais/22052-as-mulheres-do-brasil.html) | IBGE Educa | HTML | estatísticas em linguagem simples |
 | `fgv_ibre_desigualdade_genero` | [Panorama atual da desigualdade de gênero no Brasil](https://blogdoibre.fgv.br/posts/panorama-atual-da-desigualdade-de-genero-no-brasil-uma-analise-partir-da-pnadc-e-da-smt) | FGV IBRE | HTML | análise da PNAD Contínua |
+| `inep_resumo_tecnico_censo_superior_2024` | [Resumo Técnico do Censo da Educação Superior 2024](https://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_superior/resumo_tecnico_do_censo_da_educacao_superior_2024.pdf) | INEP | PDF | matrículas e concluintes por sexo e área (persona Mariana); documento longo, conferir o peso no índice |
 | `meninas_digitais` | [Programa Meninas Digitais](https://meninasdigitais.com.br/sobre-nos/) | SBC | HTML | oportunidades e redes para mulheres na computação (persona Mariana) |
 
-## Pendente de link oficial (1)
+## Opcional, pendente de link oficial (1)
 
 | Fonte | Situação |
 | --- | --- |
-| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; copiar dali a URL direta do PDF, sempre do domínio da UNESCO. Documento em inglês, mas o modelo de embeddings é multilíngue. Se o link não sair a tempo, trocar por uma fonte brasileira sobre mulheres em STEM |
+| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; copiar dali a URL direta do PDF, sempre do domínio da UNESCO. Documento em inglês, mas o modelo de embeddings é multilíngue. Não é necessária para chegar a 20 fontes |
 
 ## Fora do RAG
 
 | Fonte | Motivo | Onde usar |
 | --- | --- | --- |
-| RAIS, Novo CAGED, PNAD Contínua (microdados) | tabelas, não texto | modelo de estimativa salarial |
+| RAIS, Novo CAGED, PNAD Contínua, microdados do Censo da Educação Superior (.zip) | tabelas, não texto | modelo de estimativa salarial |
 | CBO, ESCO, O*NET | bases estruturadas de ocupações e competências | agente de competências |
 | Kaggle e Hugging Face (Glassdoor, State of Data, currículos) | datasets de terceiros | experimentos de ML |
 | Google Acadêmico, SciELO, Portal CAPES | portais de busca | revisão bibliográfica |
