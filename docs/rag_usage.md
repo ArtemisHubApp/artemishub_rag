@@ -21,6 +21,27 @@ A pipeline usa chunks de 600 caracteres e sobreposição de 100. Para reproduzir
 
 A busca padrão é `hybrid`: vetorial + BM25, fusão RRF e diversidade por página/seção. As opções `--retrieval dense` e `--retrieval pages` estão disponíveis em `src.query` e `src.evaluate`. A avaliação aceita `--output caminho.json` para preservar comparações. Métricas de página/seção não validam completude de um artigo ou qualidade de resposta.
 
+## Demonstração com LLM (Gemini)
+
+O modelo de embeddings roda localmente e não precisa de chave. Só a geração usa uma API externa. Com uma chave gratuita do [Google AI Studio](https://aistudio.google.com/apikey), preencha o `.env`:
+
+```
+LLM_API_KEY=<sua chave>
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_MODEL=gemini-2.5-flash
+```
+
+Confira no AI Studio se o modelo continua disponível no plano gratuito. No plano gratuito, o Google pode usar prompts e respostas para melhorar seus produtos: envie só os trechos públicos da base, nunca dados de usuárias. Não versione o `.env` e apague a chave depois dos testes.
+
+```bash
+uv run python -m src.pipeline   # se o índice ainda não existir
+uv run python -m src.demo       # gera reports/demo_rag.md
+```
+
+`src.demo` roda 5 perguntas (a última fora da base, para observar a abstenção) e grava, para cada uma, os trechos recuperados com título, URL, página e distância, a resposta e as fontes citadas. Outras perguntas: `--questions arquivo.txt`, uma por linha. A saída nunca registra a chave. Uma pergunta com falha não interrompe as demais; o código de saída é 1 se alguma falhar.
+
+A validação de citações confere que cada parágrafo cita uma fonte recuperada, não que o trecho sustente a frase. Revise cada resposta contra os trechos antes de usá-la como evidência.
+
 ## Fontes e relatórios
 
 `config/sources.json` mantém as URLs primárias. Cada alternativa explícita informa URL, editor, versão, seletor HTML, justificativa e limites de equivalência. `source_url` do dataset aponta à origem efetiva, enquanto `metadata.primary_url` preserva o Planalto. Falhas de todas as alternativas mantêm a fonte indisponível e bloqueiam publicação completa.
