@@ -1,6 +1,6 @@
 # Base de conhecimento do RAG Artemis
 
-A base hoje tem **5 fontes ativas** (33 seções, 221 chunks). A entrega do Segundo Desafio pede **no mínimo 20 documentos-fonte**, então este documento lista as fontes ativas, as **13 candidatas já cadastradas** em [`config/sources.json`](../config/sources.json) com `"enabled": false` e as 2 que ainda precisam de link oficial. Com tudo isso, a base chega a 20 fontes.
+A base hoje tem **5 fontes ativas** (33 seções, 221 chunks). A entrega do Segundo Desafio pede **no mínimo 20 documentos-fonte**, então este documento lista as fontes ativas, as **14 candidatas já cadastradas** em [`config/sources.json`](../config/sources.json) com `"enabled": false` e 1 que ainda precisa de link oficial. Com tudo isso, a base chega a 20 fontes.
 
 Todas as candidatas vieram dos documentos de pesquisa do grupo (First Day, Pesquisa de empoderamento feminino, PDR de 30/10 e lista de Datasets).
 
@@ -23,9 +23,9 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 | `cartilha_igualdade_salarial` | Cartilha Tira-Dúvidas da Lei da Igualdade Salarial | Ministério das Mulheres e MTE | PDF | igualdade salarial |
 | `estatisticas_genero_ibge` | Estatísticas de Gênero, 3ª edição | IBGE | PDF | estatísticas de gênero |
 
-## Candidatas cadastradas e desabilitadas (13)
+## Candidatas cadastradas e desabilitadas (14)
 
-### Prioridade 1: oficiais e direto no tema (10)
+### Prioridade 1: oficiais e direto no tema (11)
 
 | id | Fonte | Órgão | Formato | Para que serve |
 | --- | --- | --- | --- | --- |
@@ -38,6 +38,7 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 | `relatorio_transparencia_pagina` | [Relatório de Transparência Salarial](https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/relatorio-de-transparencia-salarial) | Ministério das Mulheres | HTML | o que é o relatório e quem precisa publicar |
 | `agencia_gov_6_relatorio` | [6º Relatório de Transparência Salarial](https://agenciagov.ebc.com.br/noticias/202608/empresas-com-100-ou-mais-empregados-devem-atualizar-informacoes-para-o-6o-relatorio-de-transparencia-salarial) | Agência Gov / MTE | HTML | prazos do ciclo atual (notícia datada) |
 | `dieese_8_marco_2026` | [Boletim Especial 8 de Março de 2026](https://www.dieese.org.br/boletimespecial/2026/2026mulher.pdf) | DIEESE | PDF | rendimento de mulheres e homens por escolaridade e cargo (PNAD Contínua) |
+| `portaria_mte_3714_2023` | [Portaria MTE nº 3.714/2023](https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=detalharAto&tipo=POR&numeroAto=00003714&seqAto=000&valorAno=2023&orgao=MTE&nomeTitulo=codigos&cod_modulo=420&cod_menu=7145) | MTE (texto no Datalegis/ANTT; D.O.U. de 27/11/2023, seção 1) | HTML | procedimentos do relatório de transparência e da fiscalização |
 | `onu_mulheres_weps` | [Princípios de Empoderamento das Mulheres](https://www.onumulheres.org.br/wp-content/uploads/2016/04/cartilha_ONU_Mulheres_Nov2017_digital.pdf) | ONU Mulheres e Pacto Global | PDF | boas práticas de igualdade nas organizações |
 
 ### Prioridade 2: contexto de carreira e STEM (3)
@@ -48,12 +49,11 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 | `fgv_ibre_desigualdade_genero` | [Panorama atual da desigualdade de gênero no Brasil](https://blogdoibre.fgv.br/posts/panorama-atual-da-desigualdade-de-genero-no-brasil-uma-analise-partir-da-pnadc-e-da-smt) | FGV IBRE | HTML | análise da PNAD Contínua |
 | `meninas_digitais` | [Programa Meninas Digitais](https://meninasdigitais.com.br/sobre-nos/) | SBC | HTML | oportunidades e redes para mulheres na computação (persona Mariana) |
 
-## Pendentes de link oficial (2)
+## Pendente de link oficial (1)
 
 | Fonte | Situação |
 | --- | --- |
-| Portaria MTE nº 3.714/2023 (regras do Relatório de Transparência) | só encontramos cópias não oficiais; buscar o texto no Diário Oficial da União (in.gov.br) |
-| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; usar a URL direta do PDF. Documento em inglês, mas o modelo de embeddings é multilíngue |
+| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; copiar dali a URL direta do PDF. Se o unesdoc bloquear o download automático, a alternativa institucional é o [repositório do Ministério da Educação do Peru](https://repositorio.minedu.gob.pe/handle/20.500.12799/5687), registrada como `alternatives`, como já é feito com a Câmara para as leis. Documento em inglês, mas o modelo de embeddings é multilíngue |
 
 ## Fora do RAG
 
