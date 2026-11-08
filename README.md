@@ -45,6 +45,7 @@ O MVP atual:
 - **Indexa** os trechos no ChromaDB com o modelo `paraphrase-multilingual-MiniLM-L12-v2`, sem apagar índices anteriores.
 - **Busca híbrida:** combina busca vetorial e BM25 com fusão RRF.
 - **Responde com citações**, usando um LLM compatível com a API de Chat Completions (opcional). Sem LLM configurado, mostra só os trechos encontrados.
+- **Gera a demonstração** (`python -m src.demo`): perguntas, trechos recuperados, resposta e fontes citadas em `reports/demo_rag.md`.
 - **Avalia a recuperação** com métricas de recall, hit rate e MRR em dois conjuntos de perguntas.
 
 ## ⚙️ Como funciona
@@ -104,6 +105,7 @@ uv run python -m src.pipeline      # coleta, prepara e indexa as fontes
 uv run python -m src.eda           # gera o perfil do dataset em reports/eda.json
 uv run python -m src.query "O que a cartilha informa sobre transparência salarial?"
 uv run python -m src.evaluate      # métricas de recuperação
+uv run python -m src.demo          # demonstração com LLM em reports/demo_rag.md
 ```
 
 A primeira execução baixa as fontes e o modelo de embeddings. Outras opções (`--skip-index`, `--allow-partial`, `--retrieval`, `--chunk-size`) estão em [`docs/rag_usage.md`](docs/rag_usage.md).
