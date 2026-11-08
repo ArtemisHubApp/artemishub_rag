@@ -53,7 +53,7 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 
 | Fonte | Situação |
 | --- | --- |
-| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; copiar dali a URL direta do PDF. Se o unesdoc bloquear o download automático, a alternativa institucional é o [repositório do Ministério da Educação do Peru](https://repositorio.minedu.gob.pe/handle/20.500.12799/5687), registrada como `alternatives`, como já é feito com a Câmara para as leis. Documento em inglês, mas o modelo de embeddings é multilíngue |
+| UNESCO, *Cracking the Code: Girls' and Women's Education in STEM* (2017) | o link do grupo ([unesdoc](https://unesdoc.unesco.org/ark:/48223/pf0000253479)) é a página do catálogo; copiar dali a URL direta do PDF, sempre do domínio da UNESCO. Documento em inglês, mas o modelo de embeddings é multilíngue. Se o link não sair a tempo, trocar por uma fonte brasileira sobre mulheres em STEM |
 
 ## Fora do RAG
 
