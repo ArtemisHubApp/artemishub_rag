@@ -105,7 +105,8 @@
     "kind": "pdf",
     "enabled": true,
     "expected_text": [
-      "multa"
+      "Orientação Técnica SIT",
+      "11/2024"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -159,7 +160,7 @@
     "expected_text": [
       "plano nacional"
     ],
-    "note": "Desabilitada: páginas 1 e 9 são imagem/capa sem texto extraível (PDF escaneado parcial); pipeline exige todas as páginas com texto."
+    "note": "Desabilitada, mantida após nova checagem (08/11/2026): página 9 é genuinamente vazia (0 caracteres, 0 imagens, igual ao caso do INEP), mas a página 1 tem uma imagem de página inteira (1259x1786px, provável capa com título) cujo conteúdo não pode ser confirmado como puramente decorativo sem OCR/inspeção visual. Como não é possível garantir que a página 1 não carrega texto relevante só em forma de imagem, mantida desabilitada em vez de aplicar known_blank_pages."
   },
   {
     "id": "plano_nacional_igualdade",
@@ -170,7 +171,8 @@
     "kind": "html",
     "enabled": true,
     "expected_text": [
-      "plano nacional"
+      "Plano Nacional de Igualdade Salarial e Laboral",
+      "78 ações"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -183,7 +185,8 @@
     "kind": "html",
     "enabled": true,
     "expected_text": [
-      "transparência salarial"
+      "Relatórios Nacionais de Transparência Salarial",
+      "Decreto nº 11.795"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -196,7 +199,8 @@
     "kind": "html",
     "enabled": true,
     "expected_text": [
-      "transparência salarial"
+      "6º Relatório de Transparência Salarial",
+      "Portal Emprega Brasil"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -209,7 +213,8 @@
     "kind": "pdf",
     "enabled": true,
     "expected_text": [
-      "mulheres"
+      "múltiplas formas",
+      "violência contra a mulher"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -248,7 +253,8 @@
     "kind": "html",
     "enabled": true,
     "expected_text": [
-      "gênero"
+      "Panorama atual da desigualdade de gênero",
+      "PNADC"
     ],
     "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   },
@@ -343,8 +349,8 @@
     "kind": "html",
     "enabled": true,
     "expected_text": [
-      "mulheres",
-      "ciência"
+      "Dia Internacional das Mulheres e Meninas na Ciência",
+      "Asas para o Futuro"
     ],
     "note": "Notícia oficial de 11/02/2026 sobre o Programa Asas para o Futuro e o Prêmio Mulheres e Ciência."
   }
