@@ -133,6 +133,7 @@ Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nu
 ## 📚 Documentação
 
 - [Arquitetura](docs/architecture.md)
+- [Base de conhecimento: fontes ativas e candidatas](docs/base_de_conhecimento.md)
 - [Uso detalhado do RAG](docs/rag_usage.md)
 - [Relatório de validação](docs/validation_report.md)
 - [Spec da orquestração](docs/superpowers/specs/2026-11-05-agent-orchestration.md) e [planos](docs/superpowers/plans/)

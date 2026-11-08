@@ -95,5 +95,174 @@
       "Estatísticas de Gênero",
       "IBGE"
     ]
+  },
+  {
+    "id": "ot_sit_11_2024",
+    "title": "Orientação Técnica SIT nº 11/2024 (multa por discriminação salarial)",
+    "organization": "Ministério do Trabalho e Emprego",
+    "url": "https://www.gov.br/trabalho-e-emprego/pt-br/assuntos/legislacao/SITn11de2024multacritriosremuneratrios.pdf",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "multa"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "guia_negociacao_coletiva",
+    "title": "Guia para Negociação Coletiva da Lei de Igualdade Salarial",
+    "organization": "Ministério das Mulheres e MTE",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/guia-para-negociacao-coletiva-da-lei-de-igualdade-salarial_defeso.pdf/@@display-file/file",
+    "topic": "negociacao_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "negociação coletiva"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "diretrizes_planos_acao",
+    "title": "Diretrizes para os Planos de Ação para Mitigação das Desigualdades Salariais",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/diretrizes-para-os-planos-de-acao-para-mitigacao-das-desigualdades-salariais_defeso.pdf/@@display-file/file",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "plano de ação"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "relatorio_final_gti",
+    "title": "Relatório Final do GTI de Igualdade Salarial",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/copy_of_RelatrioFinalGTIIgualdadeSalarial1.pdf",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "igualdade salarial"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "cartilha_plano_nacional",
+    "title": "Cartilha Rumo à Construção do Plano Nacional de Igualdade Salarial e Laboral",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/cartilha-rumo-a-construcao-do-plano-nacional-de-igualdade-salarial-e-laboral-entre-mulheres-e-homens.pdf",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "plano nacional"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "plano_nacional_igualdade",
+    "title": "Plano Nacional de Igualdade Salarial e Laboral (página oficial)",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "plano nacional"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "relatorio_transparencia_pagina",
+    "title": "Relatório de Transparência Salarial (página oficial)",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/relatorio-de-transparencia-salarial",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "transparência salarial"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "agencia_gov_6_relatorio",
+    "title": "Empresas com 100 ou mais empregados devem atualizar informações para o 6º Relatório de Transparência Salarial",
+    "organization": "Agência Gov / MTE",
+    "url": "https://agenciagov.ebc.com.br/noticias/202608/empresas-com-100-ou-mais-empregados-devem-atualizar-informacoes-para-o-6o-relatorio-de-transparencia-salarial",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "transparência salarial"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "dieese_8_marco_2026",
+    "title": "Boletim Especial 8 de Março de 2026",
+    "organization": "DIEESE",
+    "url": "https://www.dieese.org.br/boletimespecial/2026/2026mulher.pdf",
+    "topic": "mercado_trabalho",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "mulheres"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "onu_mulheres_weps",
+    "title": "Princípios de Empoderamento das Mulheres",
+    "organization": "ONU Mulheres e Pacto Global",
+    "url": "https://www.onumulheres.org.br/wp-content/uploads/2016/04/cartilha_ONU_Mulheres_Nov2017_digital.pdf",
+    "topic": "empoderamento",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "empoderamento"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "ibge_educa_mulheres",
+    "title": "As mulheres do Brasil",
+    "organization": "IBGE Educa",
+    "url": "https://educa.ibge.gov.br/jovens/materias-especiais/22052-as-mulheres-do-brasil.html",
+    "topic": "estatisticas_genero",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "mulheres"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "fgv_ibre_desigualdade_genero",
+    "title": "Panorama atual da desigualdade de gênero no Brasil (PNADC e SMT)",
+    "organization": "FGV IBRE",
+    "url": "https://blogdoibre.fgv.br/posts/panorama-atual-da-desigualdade-de-genero-no-brasil-uma-analise-partir-da-pnadc-e-da-smt",
+    "topic": "estatisticas_genero",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "gênero"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "meninas_digitais",
+    "title": "Programa Meninas Digitais",
+    "organization": "Sociedade Brasileira de Computação",
+    "url": "https://meninasdigitais.com.br/sobre-nos/",
+    "topic": "oportunidades_stem",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "meninas digitais"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
   }
 ]
