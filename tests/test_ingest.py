@@ -71,6 +71,62 @@ def test_legal_selector_preserves_heading_and_excludes_navigation():
         ingest.extract_html(html, selector='.missing')
 
 
+def _blank_page_pdf(blank_index):
+    with pymupdf.open() as pdf:
+        for i in range(3):
+            page = pdf.new_page()
+            if i != blank_index:
+                page.insert_text((50, 50), f"Mandatory evidence page {i + 1}. " * 10)
+        return pdf.tobytes()
+
+
+def test_known_blank_page_is_dropped_and_recorded(tmp_path, monkeypatch):
+    payload = _blank_page_pdf(blank_index=1)
+    source = {"id": "doc_with_blank", "url": "https://example.org/doc.pdf", "organization": "Issuer",
+              "title": "Fixture doc", "topic": "test", "kind": "pdf", "expected_text": ["Mandatory evidence"],
+              "known_blank_pages": [2]}
+    monkeypatch.setattr(ingest, "RAW", tmp_path)
+    real_client = httpx.Client
+    monkeypatch.setattr(ingest.httpx, "Client",
+                         lambda **kw: real_client(transport=httpx.MockTransport(lambda _: httpx.Response(200, content=payload)), **kw))
+    outcomes = []
+    docs = ingest.collect([source], retries=0, publish=False, outcomes=outcomes)
+    assert outcomes[0]["status"] == "success"
+    assert outcomes[0]["dropped_blank_pages"] == [2]
+    assert [d["page"] for d in docs] == [1, 3]
+
+
+def test_undeclared_blank_page_still_fails(tmp_path, monkeypatch):
+    payload = _blank_page_pdf(blank_index=1)
+    source = {"id": "doc_with_blank", "url": "https://example.org/doc.pdf", "organization": "Issuer",
+              "title": "Fixture doc", "topic": "test", "kind": "pdf", "expected_text": ["Mandatory evidence"]}
+    monkeypatch.setattr(ingest, "RAW", tmp_path)
+    real_client = httpx.Client
+    monkeypatch.setattr(ingest.httpx, "Client",
+                         lambda **kw: real_client(transport=httpx.MockTransport(lambda _: httpx.Response(200, content=payload)), **kw))
+    outcomes = []
+    docs = ingest.collect([source], retries=0, publish=False, outcomes=outcomes)
+    assert outcomes[0]["status"] == "failed"
+    assert outcomes[0]["reason"] == "Empty pages require review/OCR: [2]"
+    assert docs == []
+
+
+def test_declared_blank_page_that_has_text_fails(tmp_path, monkeypatch):
+    payload = _blank_page_pdf(blank_index=None)
+    source = {"id": "doc_with_blank", "url": "https://example.org/doc.pdf", "organization": "Issuer",
+              "title": "Fixture doc", "topic": "test", "kind": "pdf", "expected_text": ["Mandatory evidence"],
+              "known_blank_pages": [2]}
+    monkeypatch.setattr(ingest, "RAW", tmp_path)
+    real_client = httpx.Client
+    monkeypatch.setattr(ingest.httpx, "Client",
+                         lambda **kw: real_client(transport=httpx.MockTransport(lambda _: httpx.Response(200, content=payload)), **kw))
+    outcomes = []
+    docs = ingest.collect([source], retries=0, publish=False, outcomes=outcomes)
+    assert outcomes[0]["status"] == "failed"
+    assert outcomes[0]["reason"] == "known_blank_pages no longer blank; update config/sources.json: [2]"
+    assert docs == []
+
+
 def test_official_alternative_retains_actual_url_and_failed_attempt(tmp_path, monkeypatch):
     primary = 'https://primary.example.org/law'
     alternate = 'https://official.example.org/law'

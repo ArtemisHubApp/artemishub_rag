@@ -125,9 +125,52 @@ A latência inclui encoding, consulta e processamento lexical, sem inicializaç�
 
 ## Geração com LLM
 
-As variáveis de credenciais/modelo de geração não estavam configuradas; não houve chamada real a provedor. Os testes simulados foram preservados. O contexto agora inclui URL real, URL primária, editor, versão e artigo, e o prompt alerta que publicação original não certifica vigência atual.
+As variáveis de credenciais/modelo de geração não estavam configuradas na sessão original; não houve chamada real a provedor nessa fase. O contexto inclui URL real, URL primária, editor, versão e artigo, e o prompt alerta que publicação original não certifica vigência atual.
 
-Citações inexistentes/malformadas e parágrafos sem referência são rejeitados, mas o verificador não comprova suporte semântico. Ainda falta executar, com credenciais autorizadas, um conjunto pequeno de perguntas documentais, fora do escopo e sem resposta, avaliando fidelidade/abstenção com revisão humana. Nenhuma chave foi exposta ou versionada.
+Citações inexistentes/malformadas e parágrafos sem referência são rejeitados, mas o verificador não comprova suporte semântico. Nenhuma chave foi exposta ou versionada.
+
+### Demonstração real executada — 08/11/2026
+
+Com `LLM_API_KEY` configurada (Gemini, via endpoint compatível com OpenAI), `uv run python -m src.demo` foi executado contra as 5 perguntas fixas do roteiro. Dois problemas de infraestrutura precisaram ser resolvidos antes de medir fidelidade, nenhum deles no prompt:
+
+1. **Modelo indisponível:** `gemini-2.5-flash` (sugerido em `.env.example`) retorna 404 ("no longer available to new users"). O substituto que a própria API sugeriu, `gemini-3.8-flash`, respondeu 503 ("high demand")/timeout em testes repetidos. `models/gemini-flash-lite-latest` respondeu 200 de forma consistente e com conteúdo limpo; passou a ser o padrão em `.env.example`.
+2. **Citação combinada rejeitada:** o modelo escreve `[FONTE 2, FONTE 3]` (duas fontes em um colchete só) em vez de `[FONTE 2] [FONTE 3]`. O validador em `validate_citations` (`src/query.py`) usa `re.findall(r"\[FONTE[^\]]*\]", answer)` e rejeita qualquer label que não seja `\[FONTE\s+\d+\]` — então o bloco combinado falha como "Malformed citation identifier". Isso não é um problema de fundamentação (as duas fontes citadas sustentavam a afirmação); é só um formato de citação que o validador não reconhecia. Correção aplicada: reforço no prompt do sistema (nunca combinar fontes em um colchete) **mais** uma função `normalize_citations()` que roda antes do validador e só separa listas inequívocas — `"[FONTE 2, FONTE 3]"` e `"[FONTE 2, 3]"` → `"[FONTE 2] [FONTE 3]"`. Qualquer outra variação (intervalo `"FONTE 2-3"`, texto livre, número sem a palavra "FONTE") continua caindo no validador original e sendo rejeitada; cada número normalizado ainda passa pela checagem de existir entre os trechos recuperados. `validate_citations` não foi afrouxado. Testes em `tests/test_query.py` cobrem: 2 e 3 fontes combinadas, a forma curta `"[FONTE 1, 2]"`, citação combinada com fonte inexistente (deve falhar) e intervalo (deve falhar).
+
+Resultado após as duas correções: **5 perguntas · 4 respondidas com citação · 1 abstenção · 0 falhas** (relatório completo em `reports/demo_rag.md`, não versionado).
+
+### Fidelidade (faithfulness) — avaliação manual
+
+**Avaliação manual, feita por inspeção direta, sobre apenas 5 perguntas fixas — não é uma amostra estatística, só uma checagem de sanidade qualitativa.** Para cada afirmação da resposta, o trecho citado foi lido e comparado literalmente.
+
+| Pergunta | Afirmação | Fonte citada | Sustentada? |
+| --- | --- | --- | --- |
+| 1. Onde faço uma denúncia? | Há canal específico para denúncias de discriminação salarial | FONTE 2 (cartilha, p. 6): "...a disponibilização de canais específicos para denúncias de discriminação salarial" | **Sim** (FONTE 3, Decreto 11.795, não menciona canais — citação extra, não necessária, mas não é erro) |
+| 2. Quais empresas publicam o relatório? | Empresas de direito privado com 100+ empregados, 2x/ano | FONTE 4 (cartilha, p. 5): texto quase idêntico | **Sim** |
+| 2. (cont.) | Desde 2023, publicação semestral no Portal eletrônico do MTE | FONTE 1 (diretrizes, p. 4): texto quase idêntico | **Sim** |
+| 3. Multa por pagar menos a uma mulher | Multa = 10x o novo salário devido | FONTE 2 (OT SIT 11/2024, p. 1) **e** FONTE 3 (Lei 14.611, art. 461 §7): ambos trazem "10 (dez) vezes o valor do novo salário devido" | **Sim**, nos dois |
+| 3. (cont.) | Dobro em reincidência, sem prejuízo de outras sanções | FONTE 3: "...elevada ao dobro, no caso de reincidência, sem prejuízo das demais cominações legais" — conferido no texto completo da página (não só no trecho de 350 caracteres mostrado no relatório) | **Sim**, literal |
+| 4. Quanto as mulheres ganham a menos | Pnad 2014: mulheres ganham 74,5% do salário dos homens | FONTE 2 (ONU Mulheres, p. 24): texto quase idêntico | **Sim** |
+| 4. (cont.) | Ensino superior: R$ 8.357 (homens) vs R$ 5.409 (mulheres), diferença de R$ 35.386/ano | **Citada como FONTE 3, mas o número está em FONTE 1** (DIEESE, p. 13 — mesma tabela que também tem os dados de "Total" e "cargos de direção"). FONTE 3 é outra página do DIEESE (p. 12, sobre percentis de renda), sem esses números. | **Conteúdo correto, citação com índice trocado** — não é invenção, é erro de atribuição |
+| 4. (cont.) | Total geral: R$ 3.864 vs R$ 3.042, diferença de R$ 9.859/ano | FONTE 1 (DIEESE, p. 13), mesma tabela | **Sim** |
+| 4. (cont.) | Cargos de direção: R$ 10.492 vs R$ 7.546, diferença de R$ 35.352/ano | FONTE 1 (DIEESE, p. 13), mesma tabela | **Sim** |
+| 5. Previsão do tempo (fora do tema) | — | — | **Recusada corretamente**: nenhum dos 5 trechos recuperados trata de previsão do tempo; a resposta foi a frase de abstenção exata |
+
+**Nota por resposta** (afirmações sustentadas / total, contando a Q4-S2 como sustentada no conteúdo mas com citação incorreta): Q1 1/1, Q2 2/2, Q3 2/2, Q4 3/4 com citação correta (4/4 no conteúdo), Q5 abstenção correta (fora da contagem). **Nenhuma afirmação foi encontrada sem qualquer sustentação no contexto recuperado** — o único problema real foi a Q4 citar `[FONTE 3]` em vez de `[FONTE 1]` para um número que está de fato no contexto, só na fonte errada. Amostra pequena demais para generalizar a taxa de erro de atribuição de citação.
+
+### Context Precision@5 — nova métrica de recuperação
+
+Mede, chunk a chunk sobre a lista bruta do top 5 (sem deduplicar documentos repetidos), a fração de trechos recuperados cujo documento (ou página) é realmente relevante para a pergunta — complementar ao Recall@5, que mede se o documento certo apareceu, não quanta "poluição" veio junto. Implementada em `context_precision_at_5`/`irrelevant_by_document` (`src/evaluate.py`), sem alterar `score_ranking` nem as métricas existentes; cobertura em `tests/test_evaluate.py`.
+
+**Limitação:** a maioria das perguntas tem um único documento relevante, e o `diversify_pages` em `src/query.py` preenche deliberadamente o resto do top 5 com outros documentos para variedade — então uma precisão baixa não significa recuperação ruim, só reflete esse preenchimento. Por isso ela deve ser lida junto com `irrelevant_by_document`/`top_intruding_document`, que mostra qual documento mais ocupa espaço indevido.
+
+| Versão | Perguntas avaliadas | Context Precision@5 (documento) | Context Precision@5 (página) | Trechos não relevantes, média | Documento que mais invade |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 5 fontes (baseline), 16 originais | 16 | 72,5% | 21,25% | 1,375 | `decreto_11795_2023` (11 chunks em 16 perguntas) |
+| 20 fontes, mesmas 16 originais | 16 | 33,75% | 17,5% | 3,3125 | `guia_negociacao_coletiva` (17 chunks) |
+| 20 fontes, originais + 6 de desenvolvimento | 22 | 36,36% | 18,18% | 3,18 | `guia_negociacao_coletiva` (18 chunks) |
+| 20 fontes, holdout (16, agregado) | 16 | 33,75% | 20% | 3,3125 | `guia_negociacao_coletiva` (14 chunks) |
+
+0 `stale_or_missing_evidence` em todas as linhas. **Achado principal:** quem mais invade o top 5 de perguntas que não são sobre ele é `guia_negociacao_coletiva`, não o INEP — apesar do INEP ocupar 36,7% do índice em volume de chunks, ele não domina a recuperação nas perguntas atuais. `guia_negociacao_coletiva` tem 38 páginas e vocabulário muito próximo do tema central da base (igualdade salarial/negociação coletiva), o que o torna um candidato frequente mesmo quando não é a fonte certa.
 
 ## Persistência, testes e comandos
 
@@ -155,10 +198,41 @@ Resultado final: **54 testes aprovados; Ruff sem erros; nenhuma dependência que
 
 Artefatos locais detalhados em `reports/official_source_probe.json`, `reports/latest_run.json`, `reports/eda.json`, `reports/retrieval_evaluation.json` e `reports/review/`. O resumo numérico versionável está em [validation_metrics.json](validation_metrics.json). Scripts de experimento exigem os snapshots/artefatos locais citados; esses dados não são distribuídos pelo Git.
 
+## Expansão para 20 fontes — 08/11/2026
+
+A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks) para **20 fontes ativas, 245 documentos, 1209 chunks**. 13 das 15 candidatas pré-existentes em `config/sources.json` foram ativadas; 2 foram descartadas (`ibge_educa_mulheres`, duplicata 403 do mesmo PDF já ativo como `estatisticas_genero_ibge`; `relatorio_final_gti`, 404) e 1 nova candidata (`cartilha_plano_nacional`) foi desabilitada por ter páginas 1 e 9 sem texto extraível. 3 fontes novas de reforço foram adicionadas: `lei_9029_1995` e `lei_14457_2022` (Câmara/legin) e `gov_mulheres_dia_ciencia_fev2026` (Ministério das Mulheres).
+
+**Correção de TLS:** `download.inep.gov.br` falhava com `SSL: CERTIFICATE_VERIFY_FAILED` usando o bundle certifi padrão do Python, mas validava corretamente com o keychain do macOS. `src/ingest.py` agora chama `truststore.inject_into_ssl()` (dependência já transitiva de `httpx`/`httpcore2`, promovida a uso direto) para usar o trust store do sistema operacional em vez do bundle embutido. Não é um bypass de verificação — é trocar a fonte de certificados confiáveis.
+
+**Mecanismo `known_blank_pages`:** o PDF do INEP tem a página 108 (última) genuinamente vazia — 0 caracteres, 0 imagens, confirmado manualmente. Como `src/ingest.py` recusava qualquer fonte com páginas vazias, foi adicionado um campo opcional `known_blank_pages` por fonte: a página declarada só é descartada (não indexada) se estiver *de fato* vazia; se a página declarada tiver texto, ou se outra página vier vazia sem estar declarada, a fonte continua falhando. As páginas descartadas aparecem em `reports/latest_run.json` (`dropped_blank_pages`). Cobertura de teste em `tests/test_ingest.py` (3 casos: página declarada vazia passa; página vazia não declarada falha; página declarada que não está mais vazia falha).
+
+**Achado de qualidade não previsto — PDF do INEP com codificação de fonte customizada:** 106 das 107 páginas de texto do INEP têm números e legendas de gráficos corrompidos (glyphs/caracteres de controle em vez de dígitos reais), embora o texto corrido (prosa) extraia limpo na maioria das páginas. Isso não bloqueou a ativação (os marcadores `expected_text` são textuais, não numéricos), mas é relevante para qualquer resposta que dependa de números específicos do censo — ver limitações em `validation_metrics.json`.
+
+**Bloqueios confirmados, não contornados:**
+- `gov.br/trabalho-e-emprego/.../noticias-e-conteudo/...` e `gov.br/mcti/...` retornam **403 Forbidden** mesmo com o User-Agent legítimo da aplicação (`AcademicRAGResearch/0.2`) — WAF bloqueando o caminho, não o UA.
+- `gov.br/secom/...` também retorna 403 nos dois casos testados.
+- Reteste do Planalto (3 URLs × 3 User-Agents honestos, incluindo o padrão do curl) confirma **reset de conexão em todos os casos** — handshake TLS completo, mas o servidor fecha a conexão após o `GET`, antes de responder. Não é um bloqueio por string de UA; mantemos as alternativas da Câmara dos Deputados.
+- `senado.leg.br/noticias` retorna 200, mas o extrator genérico captura só um banner de notificação ("Quer receber notificações..."), não o corpo da matéria — descartado sem selector dedicado.
+
+**Métricas (conjunto original de 16 respondíveis + 6 perguntas de desenvolvimento = 22 casos; ver `docs/validation_metrics.json` → `expansion_20_sources_2026_11_08`):**
+
+| Métrica (top 5) | 5 fontes / 16 casos (baseline) | 20 fontes / 22 casos |
+| --- | ---: | ---: |
+| Recall@5 por documento | 100% | 95,45% |
+| MRR@5 por documento | 0,9583 | 0,8068 |
+| Recall@5 por página | 100% | 90,91% |
+| MRR@5 por página | 0,8021 | 0,7045 |
+| Holdout (16 casos) — Recall@5 / MRR@5 por página | não medido nesta fase | 78,13% / 0,4469 |
+
+22/22 casos avaliados, **0 `stale_or_missing_evidence`** — nenhuma página/hash de evidência mudou com a expansão.
+
+**Duas perguntas do conjunto original regrediram** (`q06`, `q15`), ambas com `page_recall@5 = 0`. Nenhuma tem chunk do INEP entre os 5 recuperados — a causa é concorrência de fontes novas tematicamente próximas (`portaria_mte_3714_2023`, `guia_negociacao_coletiva`, `plano_nacional_igualdade`), não o INEP. O INEP ocupa 36,7% do índice (444/1209 chunks) e a ONU Mulheres 19,6%; essa concentração é esperada em uma base com documentos de tamanhos muito desiguais e **fica registrada como limitação**, não corrigida nesta entrega — qualquer melhoria de chunking para tabelas/documentos grandes é tratada em uma branch separada (`feat/chunking-tabelas`), depois do PR desta entrega, sem alterar `content`/`content_hash` dos documentos já avaliados.
+
 ## Pendências restantes
 
-- Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso.
+- Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
 - Revisão humana independente de todos os gabaritos, e revisão jurídica específica de q17/versões das normas.
-- Corrigir reconstrução de PDFs e bordas de chunks somente com validação editorial e novas comparações; sinais atuais são preservados e reportados.
+- Corrigir reconstrução de PDFs e bordas de chunks somente com validação editorial e novas comparações; sinais atuais são preservados e reportados. Inclui a codificação de fonte customizada do PDF do INEP (números/legendas corrompidos) e o tratamento de tabelas (INEP/IBGE/ONU Mulheres), planejados para `feat/chunking-tabelas`.
 - Validar LLM real, completude de evidências, fidelidade, abstenção e resistência a injection. Métricas atuais não resolvem esses pontos.
 - Construir conjunto independente e mais diversificado antes de generalizar a melhora de recuperação ou calibrar limiar de distância.
+- Reavaliar o desbalanceamento do índice (INEP 36,7%, ONU Mulheres 19,6%) após o tratamento de tabelas na branch `feat/chunking-tabelas`.

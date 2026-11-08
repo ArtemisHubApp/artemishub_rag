@@ -59,5 +59,83 @@
     "In-sample comparisons, no held-out evaluation",
     "Page/HTML-section metrics do not measure exact passage completeness or generated-answer fidelity",
     "Source alternatives do not certify current law or byte equivalence with unavailable Planalto"
-  ]
+  ],
+  "expansion_20_sources_2026_11_08": {
+    "original_plus_dev_22": {
+      "recall_at_5": 0.9545454545454546,
+      "hit_rate_at_5": 0.9545454545454546,
+      "mrr_at_5": 0.8068181818181818,
+      "page_recall_at_5": 0.9090909090909091,
+      "page_hit_rate_at_5": 0.9090909090909091,
+      "page_mrr_at_5": 0.7045454545454546,
+      "evaluated_cases": 22,
+      "stale_or_missing_evidence": 0,
+      "context_precision_at_5": 0.36363636363636365,
+      "page_context_precision_at_5": 0.18181818181818182,
+      "mean_irrelevant_chunks_at_5": 3.1818181818181817,
+      "top_intruding_document": "guia_negociacao_coletiva",
+      "top_intruding_document_chunks": 18
+    },
+    "context_precision_comparison": {
+      "note": "Same 16 original verified questions scored against two different indexes, for a fair before/after comparison; the old 5-source Chroma collection was still physically present (never deleted on republish) and could be queried directly.",
+      "baseline_5_sources_16_original": {
+        "context_precision_at_5": 0.725,
+        "page_context_precision_at_5": 0.2125,
+        "mean_irrelevant_chunks_at_5": 1.375,
+        "top_intruding_document": "decreto_11795_2023",
+        "top_intruding_document_chunks": 11
+      },
+      "expansion_20_sources_16_original": {
+        "context_precision_at_5": 0.3375,
+        "page_context_precision_at_5": 0.175,
+        "mean_irrelevant_chunks_at_5": 3.3125,
+        "top_intruding_document": "guia_negociacao_coletiva",
+        "top_intruding_document_chunks": 17
+      },
+      "expansion_20_sources_holdout_16": {
+        "context_precision_at_5": 0.3375,
+        "page_context_precision_at_5": 0.2,
+        "mean_irrelevant_chunks_at_5": 3.3125,
+        "top_intruding_document": "guia_negociacao_coletiva",
+        "top_intruding_document_chunks": 14
+      }
+    },
+    "holdout_16": {
+      "recall_at_5": 0.875,
+      "hit_rate_at_5": 0.9375,
+      "mrr_at_5": 0.5302083333333333,
+      "page_recall_at_5": 0.78125,
+      "page_hit_rate_at_5": 0.8125,
+      "page_mrr_at_5": 0.446875,
+      "evaluated_cases": 16
+    },
+    "mean_latency_ms": 43.223727272727274,
+    "active_index": {
+      "collection": "stem_career_docs_1f900875421b4d94ae122362246588ca",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "embedding_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "partial": false,
+      "chunks": 1209,
+      "dataset_sha256": "36b82b776cca47854fc14019ea8fef4edcf889b091f7abf9885325b93dc7eaa3",
+      "snapshot": "snapshots/stem_career_docs_1f900875421b4d94ae122362246588ca"
+    },
+    "sources": {"active": 20, "disabled": 3},
+    "index_share": {
+      "inep_resumo_tecnico_censo_superior_2024": 0.3672,
+      "onu_mulheres_weps": 0.1960,
+      "estatisticas_genero_ibge": 0.1241
+    },
+    "regressions_vs_original_16": {
+      "q06": {"page_recall_at_5": 0.0, "inep_chunks_in_top5": 0, "onu_chunks_in_top5": 0,
+              "cause": "cartilha_igualdade_salarial doc correctly ranked but wrong page; crowded by portaria_mte_3714_2023 (2x) and guia_negociacao_coletiva"},
+      "q15": {"recall_at_5": 0.0, "page_recall_at_5": 0.0, "inep_chunks_in_top5": 0, "onu_chunks_in_top5": 1,
+              "cause": "both expected documents absent from top 5; crowded by guia_negociacao_coletiva (3x) and plano_nacional_igualdade"}
+    },
+    "limitations": [
+      "INEP PDF has a custom font encoding on most pages (106 of 107): narrative prose extracts cleanly, but digits/figures inside chart captions and some headers decode as control characters/glyphs, not the real numbers",
+      "Page 108 of the INEP PDF is genuinely blank (0 chars, 0 images, manually confirmed) and is excluded via known_blank_pages, not OCR'd",
+      "INEP occupies 36.7% of the chunk index but is not the cause of the 2 regressed original questions",
+      "Table-heavy content (INEP, IBGE, ONU Mulheres) is chunked as flattened running text by character count; a dedicated table-chunking pass is planned for a follow-up branch (feat/chunking-tabelas), not done in this delivery"
+    ]
+  }
 }

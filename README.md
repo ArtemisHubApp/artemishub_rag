@@ -121,16 +121,20 @@ O CI roda os dois comandos em todo push para a `main` e em todo pull request.
 
 ## 📊 Resultados da avaliação
 
-Busca híbrida, chunks de 600/100, índice com 221 chunks das 5 fontes:
+Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas:
 
-| Métrica (top 5) | Conjunto original (15 perguntas) | Holdout (16 perguntas) |
+| Métrica (top 5) | Conjunto original + dev (22 perguntas) | Holdout (16 perguntas) |
 |---|---|---|
-| Recall por documento | 100% | 96,9% |
-| MRR por documento | 0,958 | 0,896 |
-| Recall por página | 100% | 93,8% |
-| MRR por página | 0,802 | 0,773 |
+| Recall por documento | 95,5% | 87,5% |
+| MRR por documento | 0,807 | 0,530 |
+| Recall por página | 90,9% | 78,1% |
+| MRR por página | 0,705 | 0,447 |
 
-Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM ainda não foi validada. Detalhes e limitações em [`docs/validation_report.md`](docs/validation_report.md).
+Antes de ampliar a base (5 fontes, 221 chunks), o conjunto original tinha recall e MRR por página de 100% e 0,802. A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões. Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
+
+**Context Precision@5** (fração dos 5 trechos recuperados cujo documento é mesmo relevante para a pergunta, chunk a chunk): caiu de 72,5% (baseline, 5 fontes) para 33,75–36,4% (20 fontes, mesmas perguntas). Isso é esperado — a maioria das perguntas tem um único documento relevante e `diversify_pages` preenche o resto do top 5 com outros documentos de propósito — mas vale olhar quem mais "invade" esse espaço: na base de 20 fontes é o `guia_negociacao_coletiva` (não o INEP, apesar de seu peso no índice).
+
+Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM foi checada manualmente em 5 perguntas fixas (ver "Fidelidade" em `docs/validation_report.md`): nenhuma afirmação sem sustentação no contexto recuperado, mas 1 citação com o índice de fonte trocado (conteúdo certo, `[FONTE N]` errado).
 
 ## 📚 Documentação
 
