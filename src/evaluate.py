@@ -125,8 +125,12 @@ def main():
     parser.add_argument("--output", help="Report path; defaults to reports/retrieval_evaluation.json")
     parser.add_argument("--questions", default=str(ROOT / "evaluation" / "questions.jsonl"),
                         help="Arquivo JSONL de perguntas a avaliar")
+    parser.add_argument("--evaluation-group", action="append", dest="evaluation_groups",
+                        help="Restringe aos casos com este evaluation_group; repetível para incluir vários")
     args = parser.parse_args()
     cases = load_jsonl(args.questions)
+    if args.evaluation_groups:
+        cases = [c for c in cases if c.get("evaluation_group") in args.evaluation_groups]
     retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
     snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
     cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"))
