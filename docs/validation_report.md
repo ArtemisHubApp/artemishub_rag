@@ -375,6 +375,23 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 **Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,6969) — pela regra acordada, a etapa foi revertida.** Comparação caso a caso mostra a causa: a resegmentação mudou os limites de chunk de `cartilha_igualdade_salarial` (afetando `q01`, `q05`, `q10` — todas pioraram uma posição de rank na página certa) e de `lei_14611_2023` (`q18`, idem), com apenas uma melhora compensatória (`q02`, de rank 2 para rank 1). O efeito líquido foi negativo mesmo sem nenhuma pergunta ter perdido o documento ou a página certa — um efeito-ruído da resegmentação em si, não da remoção de conteúdo irrelevante propriamente dita. `src/prepare.py` e `tests/test_prepare.py` foram restaurados ao estado da Etapa 0.5 (`git checkout -- src/prepare.py tests/test_prepare.py`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 2; nenhum commit foi feito para a Etapa 1.
 
+### Etapa 2 — Extração validada de tabelas (revertida)
+
+**Mudança testada:** em `src/ingest.py`, `validate_table(rows, page_text)` aceita uma detecção de `page.find_tables()` só se tiver ≥2 linhas e entre 2–20 colunas, cabeçalho não vazio, densidade de células preenchidas ≥50%, e cada célula não vazia existindo literalmente (normalizando espaço em branco) no texto da própria página — sem alterar `content`/`content_hash` de nenhum documento existente. Calibrado e confirmado com os dois casos de referência do diagnóstico da Etapa 0: **rejeita** a pseudo-tabela da IBGE p.6 (densidade 2,1–16,8%, 13–75 colunas) e **aceita** a tabela real do INEP p.51 (densidade 78%, 4×8). A tabela da DIEESE p.13 continua não detectada por `find_tables()` (0 tabelas), confirmando o limite já conhecido — permanece só como candidata a imagem na Etapa 5. Tabelas validadas entram como chunk adicional com `content_type="table"`; `src/quality.py` ganhou uma regra própria para esse tipo (cada célula, não o texto renderizado inteiro, precisa existir literalmente na página). 13 testes novos (`tests/test_ingest.py`, `tests/test_prepare.py`, `tests/test_quality.py`), decorrentes de dados sintéticos (não de arquivos em `data/raw`, que não são versionados). `ruff` e os 84 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1` (índice reconstruído, 1283 chunks vs. 1209 antes — 74 chunks de tabela validados em toda a base):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 2) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8125 |
+| Recall@5 página | 87,5% | 87,5% |
+| MRR@5 página | 0,7083 | 0,7031 |
+| Context Precision@5 (documento) | 33,75% | 33,75% |
+| Trechos não relevantes, média | 3,3125 | 3,3125 |
+
+**Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,7031) — revertida pela mesma regra.** Causa isolada caso a caso: só `q18` mudou (MRR por página de 0,3333 para 0,25); a página correta (`lei_14611_2023`) não perdeu conteúdo nem mudou de texto — o que mudou foi `guia_negociacao_coletiva` p.1 (chunk de texto, não de tabela) ultrapassando-a no ranking híbrido. A hipótese mais provável é um efeito indireto do BM25: adicionar 74 chunks de tabela ao corpus muda as estatísticas de frequência de termo (IDF) usadas no ranking léxico para **todos** os documentos, não só para quem ganhou uma tabela — o suficiente para reordenar um empate próximo em `q18` sem nenhuma tabela estar entre os 5 recuperados nesse caso. Isso é relevante para as próximas etapas: qualquer mudança que adicione chunks ao índice (Etapa 3 muda o texto embedado mas não a contagem de chunks; Etapa 4 só reordena, não adiciona) tem menos risco desse efeito colateral específico, mas vale verificar caso a caso. `src/ingest.py`, `src/prepare.py`, `src/quality.py`, `src/common.py` e os testes novos foram restaurados ao estado da Etapa 0.5 (`git checkout --`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 3; nenhum commit foi feito para a Etapa 2. A lógica de validação de tabela (`validate_table`) em si classificou corretamente os dois casos de referência — a reversão é por efeito de ranking agregado, não por a extração estar errada.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
