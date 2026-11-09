@@ -163,14 +163,53 @@ Mede, chunk a chunk sobre a lista bruta do top 5 (sem deduplicar documentos repe
 
 **Limitação:** a maioria das perguntas tem um único documento relevante, e o `diversify_pages` em `src/query.py` preenche deliberadamente o resto do top 5 com outros documentos para variedade — então uma precisão baixa não significa recuperação ruim, só reflete esse preenchimento. Por isso ela deve ser lida junto com `irrelevant_by_document`/`top_intruding_document`, que mostra qual documento mais ocupa espaço indevido.
 
-| Versão | Perguntas avaliadas | Context Precision@5 (documento) | Context Precision@5 (página) | Trechos não relevantes, média | Documento que mais invade |
-| --- | ---: | ---: | ---: | ---: | --- |
-| 5 fontes (baseline), 16 originais | 16 | 72,5% | 21,25% | 1,375 | `decreto_11795_2023` (11 chunks em 16 perguntas) |
-| 20 fontes, mesmas 16 originais | 16 | 33,75% | 17,5% | 3,3125 | `guia_negociacao_coletiva` (17 chunks) |
-| 20 fontes, originais + 6 de desenvolvimento | 22 | 36,36% | 18,18% | 3,18 | `guia_negociacao_coletiva` (18 chunks) |
-| 20 fontes, holdout (16, agregado) | 16 | 33,75% | 20% | 3,3125 | `guia_negociacao_coletiva` (14 chunks) |
+### Comparação justa — as mesmas 16 perguntas originais, antes e depois
 
-0 `stale_or_missing_evidence` em todas as linhas. **Achado principal:** quem mais invade o top 5 de perguntas que não são sobre ele é `guia_negociacao_coletiva`, não o INEP — apesar do INEP ocupar 36,7% do índice em volume de chunks, ele não domina a recuperação nas perguntas atuais. `guia_negociacao_coletiva` tem 38 páginas e vocabulário muito próximo do tema central da base (igualdade salarial/negociação coletiva), o que o torna um candidato frequente mesmo quando não é a fonte certa.
+As 6 perguntas de desenvolvimento (`evaluation_group: "development"`) citam a fonte no próprio enunciado — mais fáceis por construção — e por isso saíram da comparação principal; `src/evaluate.py` ganhou um filtro `--evaluation-group` para reproduzir essa separação sem scripts ad hoc.
+
+| Métrica (top 5) | 5 fontes, 16 originais | 20 fontes, mesmas 16 originais |
+| --- | ---: | ---: |
+| Casos avaliados / stale | 16 / 0 | 16 / 0 |
+| Recall@5 documento | 100% | 93,75% |
+| Hit rate@5 documento | 100% | 93,75% |
+| MRR@5 documento | 0,9583 | 0,8177 |
+| Recall@5 página | 100% | 87,5% |
+| MRR@5 página | 0,8021 | 0,7083 |
+| Context Precision@5 (documento) | 72,5% | 33,75% |
+| Context Precision@5 (página) | 21,25% | 17,5% |
+| Trechos não relevantes, média | 1,375 | 3,3125 |
+| Documento que mais invade | `decreto_11795_2023` (11/16) | `guia_negociacao_coletiva` (17/16) |
+
+### Linha separada — 6 perguntas de desenvolvimento (20 fontes)
+
+| Métrica (top 5) | 20 fontes, 6 de desenvolvimento |
+| --- | ---: |
+| Casos avaliados / stale | 6 / 0 |
+| Recall@5 / MRR@5 documento | 100% / 0,7778 |
+| Recall@5 / MRR@5 página | 100% / 0,6944 |
+| Context Precision@5 (documento / página) | 43,33% / 20% |
+| Documento que mais invade | `cartilha_igualdade_salarial` (5/6) |
+
+Recall/MRR altos aqui eram esperados — todas as 6 perguntas nomeiam a fonte na pergunta — e não devem ser somados ou lidos junto com a linha das 16 originais.
+
+### Holdout (16 perguntas), antes e depois — nunca usado para ajustar nada
+
+O snapshot do índice de 5 fontes (`stem_career_docs_0e0230700e1f48a3ad550ed6d090770c`) ainda existe fisicamente em `.chroma/snapshots/` (nunca é apagado ao publicar um novo índice), então foi possível medir a linha de base real, não só a atual.
+
+| Métrica (top 5) | 5 fontes (antes) | 20 fontes (depois) |
+| --- | ---: | ---: |
+| Recall@5 documento | 96,88% | 87,5% |
+| Hit rate@5 documento | 100% | 93,75% |
+| MRR@5 documento | 0,8958 | 0,5302 |
+| Recall@5 página | 93,75% | 78,13% |
+| MRR@5 página | 0,7729 | 0,4469 |
+| Context Precision@5 (documento) | 52,5% | 33,75% |
+| Context Precision@5 (página) | 23,75% | 20% |
+| Documento que mais invade | `cartilha_igualdade_salarial` (21/16) | `guia_negociacao_coletiva` (14/16) |
+
+**A queda no holdout é maior do que no conjunto de desenvolvimento e um pouco maior do que nas mesmas 16 originais** — MRR@5 por página cai de 0,7729 para 0,4469 (queda de 42%), contra 0,8021→0,7083 (12%) nas 16 originais. O holdout nunca foi usado para ajustar nada nesta sessão; é só medido, e é o número mais pessimista — e o mais confiável — para avaliar a base de 20 fontes.
+
+0 `stale_or_missing_evidence` em todas as linhas de todas as tabelas acima. **Achado principal, consistente nas três comparações:** quem mais invade o top 5 de perguntas que não são sobre ele, na base de 20 fontes, é `guia_negociacao_coletiva`, não o INEP — apesar do INEP ocupar 36,7% do índice em volume de chunks, ele não domina a recuperação nas perguntas atuais. `guia_negociacao_coletiva` tem 38 páginas e vocabulário muito próximo do tema central da base (igualdade salarial/negociação coletiva), o que o torna um candidato frequente mesmo quando não é a fonte certa.
 
 ## Persistência, testes e comandos
 
@@ -206,7 +245,7 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 
 **Mecanismo `known_blank_pages`:** o PDF do INEP tem a página 108 (última) genuinamente vazia — 0 caracteres, 0 imagens, confirmado manualmente. Como `src/ingest.py` recusava qualquer fonte com páginas vazias, foi adicionado um campo opcional `known_blank_pages` por fonte: a página declarada só é descartada (não indexada) se estiver *de fato* vazia; se a página declarada tiver texto, ou se outra página vier vazia sem estar declarada, a fonte continua falhando. As páginas descartadas aparecem em `reports/latest_run.json` (`dropped_blank_pages`). Cobertura de teste em `tests/test_ingest.py` (3 casos: página declarada vazia passa; página vazia não declarada falha; página declarada que não está mais vazia falha).
 
-**Achado de qualidade não previsto — PDF do INEP com codificação de fonte customizada:** 106 das 107 páginas de texto do INEP têm números e legendas de gráficos corrompidos (glyphs/caracteres de controle em vez de dígitos reais), embora o texto corrido (prosa) extraia limpo na maioria das páginas. Isso não bloqueou a ativação (os marcadores `expected_text` são textuais, não numéricos), mas é relevante para qualquer resposta que dependa de números específicos do censo — ver limitações em `validation_metrics.json`.
+**Achado de qualidade não previsto — PDF do INEP com fontes sem mapeamento Unicode (ToUnicode):** parte do texto é desenhada com fontes Type0/Identity-H sem tabela ToUnicode. Nesses trechos, a extração devolve caracteres ilegíveis; o defeito é do arquivo, não do extrator (PyMuPDF, pypdf e pdfminer.six falham da mesma forma — confirmado em 09/11/2026 comparando os três sobre as mesmas páginas). O dano é localizado: afeta o cabeçalho repetido em todas as páginas ("RESUMO TÉCNICO DO CENSO... 2024") e sufixos de algumas legendas de gráfico. Nas páginas verificadas (4, 23 e 51), a prosa, os percentuais e as tabelas extraem corretamente (ex.: 51,2%, 29,3% e 43,0% na p. 23; tabela de idades na p. 51). Os gráficos são vetoriais (sem imagens). Verificação amostral, não exaustiva. Isso não bloqueou a ativação (os marcadores `expected_text` são textuais, não numéricos) — ver limitações em `validation_metrics.json`.
 
 **Bloqueios confirmados, não contornados:**
 - `gov.br/trabalho-e-emprego/.../noticias-e-conteudo/...` e `gov.br/mcti/...` retornam **403 Forbidden** mesmo com o User-Agent legítimo da aplicação (`AcademicRAGResearch/0.2`) — WAF bloqueando o caminho, não o UA.
@@ -236,3 +275,5 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 - Validar LLM real, completude de evidências, fidelidade, abstenção e resistência a injection. Métricas atuais não resolvem esses pontos.
 - Construir conjunto independente e mais diversificado antes de generalizar a melhora de recuperação ou calibrar limiar de distância.
 - Reavaliar o desbalanceamento do índice (INEP 36,7%, ONU Mulheres 19,6%) após o tratamento de tabelas na branch `feat/chunking-tabelas`.
+- Remover, na camada de chunking (`src/prepare.py`), o cabeçalho repetido ilegível do INEP ("RESUMO TÉCNICO DO CENSO... 2024"), sem alterar o `content` da página.
+- Avaliar a Sinopse Estatística oficial do Censo da Educação Superior em planilha (zip de 397 MB, `download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip`) como fonte numericamente mais confiável para perguntas estatísticas sobre o censo.

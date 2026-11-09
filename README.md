@@ -121,20 +121,33 @@ O CI roda os dois comandos em todo push para a `main` e em todo pull request.
 
 ## 📊 Resultados da avaliação
 
-Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas:
+Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas. **Comparação justa: as mesmas 16 perguntas originais, antes (5 fontes) e depois (20 fontes)** — as 6 perguntas novas (`evaluation_group: "development"`, todas citam a fonte no próprio enunciado, o que as torna mais fáceis) ficam numa linha separada, não misturadas na comparação principal:
 
-| Métrica (top 5) | Conjunto original + dev (22 perguntas) | Holdout (16 perguntas) |
+| Métrica (top 5) | 5 fontes, 16 originais (antes) | 20 fontes, mesmas 16 originais (depois) | 20 fontes, 6 de desenvolvimento |
+|---|---|---|---|
+| Casos avaliados / stale | 16 / 0 | 16 / 0 | 6 / 0 |
+| Recall@5 por documento | 100% | 93,75% | 100% |
+| Hit rate@5 por documento | 100% | 93,75% | 100% |
+| MRR@5 por documento | 0,9583 | 0,8177 | 0,7778 |
+| Recall@5 por página | 100% | 87,5% | 100% |
+| MRR@5 por página | 0,8021 | 0,7083 | 0,6944 |
+| Context Precision@5 (documento) | 72,5% | 33,75% | 43,33% |
+| Context Precision@5 (página) | 21,25% | 17,5% | 20% |
+
+A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões; quem mais "invade" o top 5 nas perguntas originais é o `guia_negociacao_coletiva` (17 chunks em 16 perguntas). Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
+
+**Holdout (16 perguntas, nunca usado para ajustar nada), antes e depois:**
+
+| Métrica (top 5) | 5 fontes (antes) | 20 fontes (depois) |
 |---|---|---|
-| Recall por documento | 95,5% | 87,5% |
-| MRR por documento | 0,807 | 0,530 |
-| Recall por página | 90,9% | 78,1% |
-| MRR por página | 0,705 | 0,447 |
+| Recall@5 por documento | 96,88% | 87,5% |
+| MRR@5 por documento | 0,8958 | 0,5302 |
+| Recall@5 por página | 93,75% | 78,13% |
+| MRR@5 por página | 0,7729 | 0,4469 |
 
-Antes de ampliar a base (5 fontes, 221 chunks), o conjunto original tinha recall e MRR por página de 100% e 0,802. A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões. Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
+A queda no holdout é **maior** do que no conjunto de desenvolvimento (100%/0,69 por página) — esperado, já que as perguntas de desenvolvimento citam a fonte no enunciado. O holdout, fora da amostra usada para decidir qualquer coisa, é o número que importa mais para avaliar a base de 20 fontes, e ele caiu mais do que os outros dois conjuntos sugeririam isoladamente.
 
-**Context Precision@5** (fração dos 5 trechos recuperados cujo documento é mesmo relevante para a pergunta, chunk a chunk): caiu de 72,5% (baseline, 5 fontes) para 33,75–36,4% (20 fontes, mesmas perguntas). Isso é esperado — a maioria das perguntas tem um único documento relevante e `diversify_pages` preenche o resto do top 5 com outros documentos de propósito — mas vale olhar quem mais "invade" esse espaço: na base de 20 fontes é o `guia_negociacao_coletiva` (não o INEP, apesar de seu peso no índice).
-
-Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM foi checada manualmente em 5 perguntas fixas (ver "Fidelidade" em `docs/validation_report.md`): nenhuma afirmação sem sustentação no contexto recuperado, mas 1 citação com o índice de fonte trocado (conteúdo certo, `[FONTE N]` errado).
+Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM foi checada manualmente em 5 perguntas fixas, com o modelo final `gemini-3.5-flash` (ver "Fidelidade" em `docs/validation_report.md`): nenhuma afirmação sem sustentação no contexto recuperado, mas 1 citação com o índice de fonte trocado (conteúdo certo, `[FONTE N]` errado) e 2 abstenções em perguntas com evidência suficiente (incluindo a pergunta da multa).
 
 ## 📚 Documentação
 
