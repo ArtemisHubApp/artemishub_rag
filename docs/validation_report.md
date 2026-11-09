@@ -426,6 +426,48 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 **Page Recall@5 e page MRR@5 pioraram — revertida pela mesma regra.** Causa isolada: `q01` (`cartilha_igualdade_salarial`) perdeu a página certa por completo (recall de página caiu de 1,0 para 0,0), mesmo com o documento ainda sendo o mais bem ranqueado (MRR por documento permaneceu 1,0) — o limite de 2 chunks por documento descartou justamente o chunk da página certa, porque esse documento tinha 3+ chunks bem ranqueados e o da página certa não estava entre os 2 primeiros. O limite ajuda a diversidade de fontes mas pode custar precisão quando o próprio documento relevante domina o ranking — o trade-off que a Etapa 0.5 já havia registrado como esperado para `q06`/`q15` apareceu aqui em sentido inverso. `src/query.py` e os testes novos foram restaurados ao estado da Etapa 0.5; nenhum commit foi feito para a Etapa 4.
 
+### Tabela consolidada — as 4 etapas revertidas vs. a base (Etapa 0.5), 16 perguntas originais
+
+**O critério de reversão, fixado antes de medir qualquer etapa, era só `page_recall_at_5` e/ou `page_mrr_at_5` nas 16 perguntas originais — nenhuma outra métrica (Recall@5 por documento, Context Precision, trechos irrelevantes) contava para a decisão de manter ou reverter, mesmo quando melhorava.** As quatro etapas abaixo já foram revertidas (commits `c870c1b`, `c482fda`, `c145b04`, `da0bac5`); os números aqui vêm de reaplicar cada mudança isoladamente sobre a mesma base (Etapa 0.5) só para esta comparação, sem reabrir nenhuma decisão de reversão.
+
+**Gabarito v1:**
+
+| Etapa | Recall@5 doc | Hit@5 doc | MRR@5 doc | Recall@5 página | Hit@5 página | MRR@5 página | CP@5 doc | Irrelevantes (média) | Intruso principal |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| **Base (Etapa 0.5)** | 93,75% | 93,75% | 0,8177 | 87,5% | 87,5% | 0,7083 | 33,75% | 3,3125 | `guia_negociacao_coletiva` (17) |
+| Etapa 1 (ruído) | 93,75% | 93,75% | 0,8094 | 87,5% | 87,5% | 0,6969 | 31,25% | 3,4375 | `guia_negociacao_coletiva` (19) |
+| Etapa 2 (tabelas) | 93,75% | 93,75% | 0,8125 | 87,5% | 87,5% | 0,7031 | 33,75% | 3,3125 | `guia_negociacao_coletiva` (17) |
+| Etapa 3 (contexto no embedding) | 90,625% | 93,75% | 0,6271 | 81,25% | 81,25% | 0,5906 | 32,5% | 3,375 | `guia_negociacao_coletiva` (13) |
+| Etapa 4 (limite por documento) | 93,75% | 93,75% | 0,8177 | 81,25% | 81,25% | 0,6927 | 28,75% | 3,5625 | `guia_negociacao_coletiva` (15) |
+
+**Gabarito v2 (mesmo índice/retrieval de cada etapa; só o gabarito muda):**
+
+| Etapa | Recall@5 doc | Hit@5 doc | MRR@5 doc | Recall@5 página | Hit@5 página | MRR@5 página | CP@5 doc | Irrelevantes (média) | Intruso principal |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| **Base (Etapa 0.5)** | 93,75% | 93,75% | 0,8229 | 93,75% | 93,75% | 0,7344 | 37,5% | 3,125 | `guia_negociacao_coletiva` (16) |
+| Etapa 1 (ruído) | 93,75% | 93,75% | 0,8281 | 93,75% | 93,75% | 0,7365 | 35% | 3,25 | `guia_negociacao_coletiva` (18) |
+| Etapa 2 (tabelas) | 93,75% | 93,75% | 0,8177 | 93,75% | 93,75% | 0,7292 | 37,5% | 3,125 | `guia_negociacao_coletiva` (16) |
+| Etapa 3 (contexto no embedding) | 90,625% | 93,75% | 0,6771 | 87,5% | 87,5% | 0,6063 | 35% | 3,25 | `guia_negociacao_coletiva` (13) |
+| Etapa 4 (limite por documento) | 93,75% | 93,75% | 0,8229 | 87,5% | 87,5% | 0,7188 | 32,5% | 3,375 | `guia_negociacao_coletiva` (14) |
+
+**Delta vs. base (gabarito v1, critério de reversão) e perguntas que mudaram de posição — doc ou página, para cima ou para baixo — das 16 originais:**
+
+| Etapa | Δ Recall@5 página | Δ MRR@5 página | Perguntas que mudaram | Quantas |
+| --- | ---: | ---: | --- | ---: |
+| Etapa 1 | 0 pp | −0,0114 | `q01`↓, `q02`↑, `q05`↓, `q10`↓, `q18`↓ | 5 |
+| Etapa 2 | 0 pp | −0,0052 | `q18`↓ | 1 |
+| Etapa 3 | **−6,25 pp** | **−0,1177** | `q01`↑, `q02`↓(perde a página), `q03`↓, `q07`↓, `q08`↓, `q18`↑ | 6 |
+| Etapa 4 | **−6,25 pp** | −0,0156 | `q01`↓(perde a página) | 1 |
+
+**Explicação provável por etapa:**
+
+- **Etapa 1 (ruído):** a resegmentação por página mudou os limites de chunk de `cartilha_igualdade_salarial` (`q01`, `q02`, `q05`, `q10`) e `lei_14611_2023` (`q18`) mesmo sem remover conteúdo relevante nelas — um efeito-ruído da resegmentação em si. Uma melhora (`q02`) não compensou quatro pioras.
+- **Etapa 2 (tabelas):** só `q18` mudou, e nenhuma tabela aparece entre os 5 chunks recuperados nesse caso — hipótese: os 74 chunks de tabela novos mudaram as estatísticas de IDF do BM25 para todo o corpus, o suficiente para reordenar um empate próximo nessa única pergunta.
+- **Etapa 3 (contexto no embedding):** a regressão mais ampla das quatro — 6 perguntas mudaram, 4 pioraram (`q02` perdeu a página por completo) contra só 2 melhoras. Um cabeçalho fixo repetido (quase idêntico) em todo chunk do mesmo documento dilui o sinal semântico do trecho no embedding denso de um modelo pequeno (MiniLM multilíngue).
+- **Etapa 4 (limite por documento):** só `q01` mudou, mas a perda foi total (recall de página 1,0 → 0,0) — o limite de 2 chunks por documento descartou justamente o chunk da página certa, porque `cartilha_igualdade_salarial` (o próprio documento relevante) tinha 3+ chunks bem ranqueados e o da página certa não estava entre os 2 primeiros.
+
+**Leitura agregada:** em nenhuma etapa o gabarito v2 piorou em relação ao v1 correspondente (confirma de novo a invariante de design da Etapa 0.5), e a ordem de severidade da regressão de MRR@5 por página é a mesma nos dois gabaritos (Etapa 3 > Etapa 4 > Etapa 1 > Etapa 2); por Recall@5 de página, Etapas 3 e 4 empatam como as duas únicas com queda (−6,25 pp cada). Isso sustenta que as regressões são do retrieval/chunking em si, não um artefato do gabarito usado para medir.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
