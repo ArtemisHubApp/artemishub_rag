@@ -28,8 +28,10 @@ O modelo de embeddings roda localmente e não precisa de chave. Só a geração 
 ```
 LLM_API_KEY=<sua chave>
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-LLM_MODEL=gemini-2.5-flash
+LLM_MODEL=gemini-3.5-flash
 ```
+
+`gemini-2.5-flash` está indisponível para novas chamadas (404: "no longer available to new users"), testado em 08/11/2026. Use uma versão fixa, nunca um apelido como `-latest`: um apelido muda de modelo sem aviso e quebra a reprodutibilidade da demonstração. `gemini-3.5-flash` foi testado e responde (200 OK, ~12s por chamada); se der 503 ("high demand") ou timeout repetido, a alternativa testada é `gemini-3.5-flash-lite` (~0,7s por chamada).
 
 Confira no AI Studio se o modelo continua disponível no plano gratuito. No plano gratuito, o Google pode usar prompts e respostas para melhorar seus produtos: envie só os trechos públicos da base, nunca dados de usuárias. Não versione o `.env` e apague a chave depois dos testes.
 
