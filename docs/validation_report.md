@@ -358,6 +358,23 @@ PR aberto a partir da `main` (já com o PR #14 mergeado). Regras: `content`/`con
 
 Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No holdout — nunca usado para decidir nada — o v2 já recupera uma parte real da queda de 5 para 20 fontes**: MRR@5 por página sobe de 0,4469 para 0,5094 (+14%) só corrigindo o gabarito, sem qualquer mudança de chunking/busca ainda.
 
+### Etapa 1 — Filtragem de ruído no chunking (revertida)
+
+**Mudança testada:** em `src/prepare.py`, detecção de linhas de ruído por documento (cabeçalho/rodapé repetido em ≥40% das páginas do mesmo documento, linhas de número de página isoladas, eixos de ano de gráfico, e linhas majoritariamente ilegíveis por controle/Cirílico) e remoção delas antes do chunking, dividindo cada página em segmentos contíguos (nunca unindo texto através de uma linha removida, preservando o contrato de substring literal de `validate_chunks`) com fallback para a página inteira se a filtragem removesse tudo. Testada com 10 testes dedicados (`tests/test_prepare.py`), cobrindo cada função nova e os dois casos de contrato (chunk sempre substring literal da página; página 100% ruído ainda gera ≥1 chunk). `ruff` e os 82 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1`, reconstruindo o índice (2764 chunks, vs. os ~1209 anteriores — a filtragem também elimina chunks que eram só ruído):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 1) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8094 |
+| Recall@5 página | 87,5% | 87,5% |
+| MRR@5 página | 0,7083 | 0,6969 |
+| Context Precision@5 (documento) | 33,75% | 31,25% |
+| Trechos não relevantes, média | 3,3125 | 3,4375 |
+
+**Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,6969) — pela regra acordada, a etapa foi revertida.** Comparação caso a caso mostra a causa: a resegmentação mudou os limites de chunk de `cartilha_igualdade_salarial` (afetando `q01`, `q05`, `q10` — todas pioraram uma posição de rank na página certa) e de `lei_14611_2023` (`q18`, idem), com apenas uma melhora compensatória (`q02`, de rank 2 para rank 1). O efeito líquido foi negativo mesmo sem nenhuma pergunta ter perdido o documento ou a página certa — um efeito-ruído da resegmentação em si, não da remoção de conteúdo irrelevante propriamente dita. `src/prepare.py` e `tests/test_prepare.py` foram restaurados ao estado da Etapa 0.5 (`git checkout -- src/prepare.py tests/test_prepare.py`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 2; nenhum commit foi feito para a Etapa 1.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
@@ -366,7 +383,7 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 - Validar LLM real, completude de evidências, fidelidade, abstenção e resistência a injection. Métricas atuais não resolvem esses pontos.
 - Construir conjunto independente e mais diversificado antes de generalizar a melhora de recuperação ou calibrar limiar de distância.
 - Reavaliar o desbalanceamento do índice (INEP 36,7%, ONU Mulheres 19,6%) após o tratamento de tabelas na branch `feat/chunking-tabelas`.
-- Remover, na camada de chunking (`src/prepare.py`), o cabeçalho repetido ilegível do INEP ("RESUMO TÉCNICO DO CENSO... 2024"), sem alterar o `content` da página.
+- Filtragem de ruído no chunking tentada e revertida (ver Etapa 1 acima): piorou MRR@5 por página nas 16 originais por efeito de resegmentação, não por conteúdo removido. Uma abordagem mais conservadora (ex.: só remover linhas idênticas em 100% das páginas, sem alterar a segmentação do restante do texto) pode merecer nova tentativa em PR futuro, com a mesma medição caso a caso.
 - Avaliar a Sinopse Estatística oficial do Censo da Educação Superior em planilha (zip de 397 MB, `download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip`) como fonte numericamente mais confiável para perguntas estatísticas sobre o censo.
 - Nova tentativa de geração guiada pelo motivo do validador: ao receber `CitationValidationError`, tentar novamente (1 retry) devolvendo ao modelo a mensagem exata do validador (ex.: "LLM answer contains an uncited paragraph: remova ou cite esse parágrafo"), em vez de bloquear direto. Sem afrouxar `validate_citations`. Não implementado nesta sessão; precisa de aprovação antes.
 - Decodificar o deslocamento de código de caractere (-5) em `diretrizes_planos_acao`, em PR próprio: identificar os spans afetados pelo nome da fonte defeituosa em `page.get_text("dict")` (não por heurística de texto), revisar a evidência das páginas afetadas e atualizar os hashes do gabarito com registro — não feito nesta branch porque mudaria `content`/`content_hash` e o gabarito de `q23`.
