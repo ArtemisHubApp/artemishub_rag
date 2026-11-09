@@ -409,6 +409,23 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 **Regressão grande e inequívoca (não um efeito de uma única pergunta): `q02` perdeu completamente o documento/página certos (recall e MRR foram a zero), e várias outras perguntas caíram de MRR 1,0 para 0,2–0,25.** Hipótese: o modelo de embedding usado (`paraphrase-multilingual-MiniLM-L12-v2`, pequeno, 128 tokens efetivos de contexto curto) dilui o sinal semântico do próprio trecho quando um cabeçalho fixo de ~15–20 tokens (repetido, quase idêntico, em todo chunk do mesmo documento) é prefixado — pior ainda em chunks já curtos. Revertida imediatamente pela regra combinada (regressão clara em page Recall@5 e page MRR@5, não só MRR marginal como nas Etapas 1/2). `src/prepare.py`, `src/index.py` e os testes novos foram restaurados ao estado da Etapa 0.5; o índice foi reconstruído de volta antes de seguir para a Etapa 4; nenhum commit foi feito para a Etapa 3. A comparação de BM25 com/sem o prefixo, planejada como parte desta etapa, não chegou a ser feita: a regressão no embedding denso já foi suficiente para descartar a abordagem como testada.
 
+### Etapa 4 — Limite de chunks por documento no top 5 (revertida)
+
+**Mudança testada:** `diversify_pages` em `src/query.py` ganhou `max_per_document=2`: depois de diversificar por página (comportamento já existente), um segundo passo limitava a no máximo 2 chunks do mesmo `document_id` no top 5 final, preenchendo as vagas restantes com outros documentos primeiro e só excedendo o limite se não houvesse candidato de outro documento disponível. Puramente uma mudança de reordenação na recuperação — não toca `src/prepare.py`/`src/index.py`, então o índice não precisou ser reconstruído. 3 testes novos; `ruff` e os 77 testes passaram antes da medição.
+
+**Nota operacional:** a medição inicial do índice usou embeddings residuais da Etapa 3 (revertida no código, mas `src/index.py` original reaproveita embeddings cacheadas por `content_sha256`, que não muda entre as etapas — só `embedding_sha256`, que não existe mais fora da Etapa 3, teria invalidado o cache corretamente). Isso foi percebido porque os números batiam exatamente com a regressão já revertida da Etapa 3, não com a linha de base. Corrigido apagando `.chroma/` (não versionado) e reconstruindo do zero antes de medir de novo — relevante para qualquer etapa futura que mude só o texto embedado sem mudar `content_sha256`.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1`, índice reconstruído do zero:**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 4) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8177 |
+| Recall@5 página | 87,5% | **81,25%** |
+| MRR@5 página | 0,7083 | **0,6927** |
+
+**Page Recall@5 e page MRR@5 pioraram — revertida pela mesma regra.** Causa isolada: `q01` (`cartilha_igualdade_salarial`) perdeu a página certa por completo (recall de página caiu de 1,0 para 0,0), mesmo com o documento ainda sendo o mais bem ranqueado (MRR por documento permaneceu 1,0) — o limite de 2 chunks por documento descartou justamente o chunk da página certa, porque esse documento tinha 3+ chunks bem ranqueados e o da página certa não estava entre os 2 primeiros. O limite ajuda a diversidade de fontes mas pode custar precisão quando o próprio documento relevante domina o ranking — o trade-off que a Etapa 0.5 já havia registrado como esperado para `q06`/`q15` apareceu aqui em sentido inverso. `src/query.py` e os testes novos foram restaurados ao estado da Etapa 0.5; nenhum commit foi feito para a Etapa 4.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
