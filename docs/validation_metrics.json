@@ -156,5 +156,65 @@
       "Remove the unreadable repeated INEP header at the chunking layer (src/prepare.py), not by touching page content",
       "Evaluate the official INEP Sinopse Estatistica do Censo da Educacao Superior spreadsheet (zip, 397 MB, download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip) as a more numerically reliable source for statistical questions"
     ]
+  },
+  "qualidade_base_2026_11_09": {
+    "note": "feat/qualidade-base branch. gold v2 adds additional_evidence (Etapa 0.5 review) without touching document content/content_hash; score_ranking() itself is unchanged, v2 only remaps an alternative-evidence match onto the original relevant id/page before scoring, so v2 can only match or beat v1 per case, never worsen it by inflating the denominator. Etapas 1-4 (noise filtering, table extraction, embedding-context prefix, per-document cap) were each implemented, tested and measured, then reverted: every one regressed page_recall_at_5 and/or page_mrr_at_5 on the 16 original questions. None of that reverted code is in the final diff; the only surviving change versus main is the gold v2 mechanism and this documentation.",
+    "fair_comparison_16_original": {
+      "main_gold_v1": {
+        "recall_at_5": 0.9375, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.8177083333333334,
+        "page_recall_at_5": 0.875, "page_hit_rate_at_5": 0.875, "page_mrr_at_5": 0.7083333333333334,
+        "context_precision_at_5": 0.3375, "mean_irrelevant_chunks_at_5": 3.3125,
+        "top_intruding_document": "guia_negociacao_coletiva", "top_intruding_document_chunks": 17,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      },
+      "branch_gold_v2_recommended": {
+        "recall_at_5": 0.9375, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.8229166666666666,
+        "page_recall_at_5": 0.9375, "page_hit_rate_at_5": 0.9375, "page_mrr_at_5": 0.734375,
+        "context_precision_at_5": 0.375, "mean_irrelevant_chunks_at_5": 3.125,
+        "top_intruding_document": "guia_negociacao_coletiva", "top_intruding_document_chunks": 16,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      }
+    },
+    "holdout_16": {
+      "note": "Measured once, never used to tune anything in this branch.",
+      "gold_v1": {
+        "recall_at_5": 0.875, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.5302083333333333,
+        "page_recall_at_5": 0.78125, "page_hit_rate_at_5": 0.8125, "page_mrr_at_5": 0.446875,
+        "context_precision_at_5": 0.3375, "mean_irrelevant_chunks_at_5": 3.3125,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      },
+      "gold_v2": {
+        "recall_at_5": 0.90625, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.5614583333333333,
+        "page_recall_at_5": 0.84375, "page_hit_rate_at_5": 0.875, "page_mrr_at_5": 0.509375,
+        "context_precision_at_5": 0.3875, "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      }
+    },
+    "reverted_etapas_16_original_gold_v1": {
+      "note": "Reapplied in isolation over the same base purely to produce this comparison table; none of this code is in the final diff. Revert criterion was page_recall_at_5/page_mrr_at_5 only.",
+      "etapa1_noise_filtering": {"recall_at_5": 0.9375, "mrr_at_5": 0.809375, "page_recall_at_5": 0.875, "page_mrr_at_5": 0.696875, "questions_changed": ["q01", "q02", "q05", "q10", "q18"]},
+      "etapa2_table_extraction": {"recall_at_5": 0.9375, "mrr_at_5": 0.8125, "page_recall_at_5": 0.875, "page_mrr_at_5": 0.703125, "questions_changed": ["q18"]},
+      "etapa3_embedding_context": {"recall_at_5": 0.90625, "mrr_at_5": 0.6270833333333333, "page_recall_at_5": 0.8125, "page_mrr_at_5": 0.590625, "questions_changed": ["q01", "q02", "q03", "q07", "q08", "q18"]},
+      "etapa4_per_document_cap": {"recall_at_5": 0.9375, "mrr_at_5": 0.8177083333333334, "page_recall_at_5": 0.8125, "page_mrr_at_5": 0.6927083333333334, "questions_changed": ["q01"]}
+    },
+    "measurement_vs_retrieval_split": {
+      "page_mrr_drop_5_to_20_sources_v1": 0.09375,
+      "recovered_by_gold_v2_alone": 0.0260416666666667,
+      "recovered_fraction": 0.2778,
+      "remaining_real_retrieval_drop": 0.0677083333333333,
+      "remaining_fraction": 0.7222
+    },
+    "max_distance_suggestion": {
+      "note": "Not activated; distributions overlap too much for a tight cutoff without a more diverse eval set.",
+      "relevant_chunk_distance": {"n": 58, "min": 0.1417, "p25": 0.2746, "median": 0.3205, "p75": 0.3648, "max": 0.5961},
+      "irrelevant_chunk_distance": {"n": 77, "min": 0.1636, "p25": 0.2773, "median": 0.3197, "p75": 0.3747, "max": 0.6936},
+      "suggested_value_if_activated": 0.65
+    },
+    "active_index": {
+      "collection": "stem_career_docs_561ffb71df724fbbaa775acea385caf1",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "embedding_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "partial": false,
+      "chunks": 1209
+    }
   }
 }
