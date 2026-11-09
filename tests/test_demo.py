@@ -40,6 +40,27 @@ def test_render_marks_cited_source_abstention_and_missing_llm():
     assert "gemini-test" in text
 
 
-def test_invalid_citation_is_reported_as_failure():
+def test_invalid_citation_records_reason_and_raw_answer():
     results = run(["a"], FakeRetriever(HITS), lambda q, h: "Inventado [FONTE 9]")
-    assert results[0]["error"] == "ValueError"
+    result = results[0]
+    assert result["error"] == "CitationValidationError"
+    assert result["citation_error_reason"] == "LLM cited a source that was not retrieved"
+    assert result["citation_error_raw_answer"] == "Inventado [FONTE 9]"
+    text = render_markdown(results, {})
+    assert "LLM cited a source that was not retrieved" in text
+    assert "Resposta barrada pelo validador — não exibida ao usuário" in text
+    assert "Inventado [FONTE 9]" in text
+
+
+def test_network_failure_still_hides_details():
+    def generator(question, hits):
+        raise RuntimeError("Authorization: Bearer secret")
+
+    results = run(["a"], FakeRetriever(HITS), generator)
+    result = results[0]
+    assert result["error"] == "RuntimeError"
+    assert result["citation_error_reason"] is None
+    assert result["citation_error_raw_answer"] is None
+    text = render_markdown(results, {})
+    assert "secret" not in text
+    assert "Falha na geração (RuntimeError)" in text

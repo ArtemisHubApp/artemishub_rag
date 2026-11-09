@@ -110,24 +110,34 @@ def normalize_citations(answer):
     return _CITATION_LIST.sub(split_list, answer)
 
 
+class CitationValidationError(ValueError):
+    """Raised by validate_citations; carries the validator's reason and the raw answer
+    (after normalize_citations, before validation) so callers can audit what the LLM
+    actually produced without that text reaching end users by default."""
+
+    def __init__(self, message, raw_answer):
+        super().__init__(message)
+        self.raw_answer = raw_answer
+
+
 def validate_citations(answer, hits):
     """Check referential validity, not semantic entailment or legal correctness."""
     if not isinstance(answer, str) or not answer.strip():
-        raise ValueError("Empty LLM response")
+        raise CitationValidationError("Empty LLM response", answer)
     labels = re.findall(r"\[FONTE[^\]]*\]", answer)
     if any(not re.fullmatch(r"\[FONTE\s+\d+\]", label) for label in labels):
-        raise ValueError("Malformed citation identifier")
+        raise CitationValidationError("Malformed citation identifier", answer)
     references = [int(n) for n in re.findall(r"\[FONTE\s+(\d+)\]", answer)]
     if any(n < 1 or n > len(hits) for n in references):
-        raise ValueError("LLM cited a source that was not retrieved")
+        raise CitationValidationError("LLM cited a source that was not retrieved", answer)
     if answer.strip() == ABSTENTION:
         return []
     if not references:
-        raise ValueError("LLM answer has no verifiable citation identifiers")
+        raise CitationValidationError("LLM answer has no verifiable citation identifiers", answer)
     # Every substantive paragraph must carry its own reference.
     for paragraph in re.split(r"\n\s*\n", answer.strip()):
         if paragraph.strip() and not re.search(r"\[FONTE\s+\d+\]", paragraph):
-            raise ValueError("LLM answer contains an uncited paragraph")
+            raise CitationValidationError("LLM answer contains an uncited paragraph", answer)
     return sorted(set(references))
 
 

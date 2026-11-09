@@ -12,7 +12,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from src.common import ROOT
-from src.query import ABSTENTION, generate, validate_citations
+from src.query import ABSTENTION, CitationValidationError, generate, validate_citations
 
 QUESTIONS = [
     "Onde faço uma denúncia de desigualdade salarial?",
@@ -27,13 +27,18 @@ def run(questions, retriever, generator=generate, top_k=5):
     """Return one result per question; a failure in one question never stops the others."""
     results = []
     for question in questions:
-        result = {"question": question, "hits": [], "answer": None, "cited": [], "error": None}
+        result = {"question": question, "hits": [], "answer": None, "cited": [], "error": None,
+                  "citation_error_reason": None, "citation_error_raw_answer": None}
         try:
             result["hits"] = retriever.retrieve(question, top_k)
             answer = generator(question, result["hits"])
             result["answer"] = answer
             if answer and answer != ABSTENTION:
                 result["cited"] = validate_citations(answer, result["hits"])
+        except CitationValidationError as exc:
+            result["error"] = type(exc).__name__
+            result["citation_error_reason"] = str(exc)
+            result["citation_error_raw_answer"] = exc.raw_answer
         except Exception as exc:  # noqa: BLE001 - recorded per question; details may hold secrets
             result["error"] = type(exc).__name__
         results.append(result)
@@ -71,7 +76,11 @@ def render_markdown(results, context):
                       f" · página {page}{distance_text}{used}", "",
                       f"> {_one_line(hit.get('text'))}", ""]
         lines += ["### Resposta", ""]
-        if result["error"]:
+        if result["citation_error_reason"] is not None:
+            lines += [f"Falha na geração ({result['error']}): {result['citation_error_reason']}.", "",
+                      "**Resposta barrada pelo validador — não exibida ao usuário:**", "",
+                      f"> {_one_line(result['citation_error_raw_answer'], limit=2000)}", ""]
+        elif result["error"]:
             lines += [f"Falha na geração ({result['error']}). Confira a configuração do LLM e rode de novo.", ""]
         elif result["answer"] is None:
             lines += ["LLM não configurado. Defina LLM_API_KEY e LLM_MODEL no .env.", ""]
