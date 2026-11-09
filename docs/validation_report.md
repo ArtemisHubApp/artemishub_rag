@@ -392,6 +392,23 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 **Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,7031) — revertida pela mesma regra.** Causa isolada caso a caso: só `q18` mudou (MRR por página de 0,3333 para 0,25); a página correta (`lei_14611_2023`) não perdeu conteúdo nem mudou de texto — o que mudou foi `guia_negociacao_coletiva` p.1 (chunk de texto, não de tabela) ultrapassando-a no ranking híbrido. A hipótese mais provável é um efeito indireto do BM25: adicionar 74 chunks de tabela ao corpus muda as estatísticas de frequência de termo (IDF) usadas no ranking léxico para **todos** os documentos, não só para quem ganhou uma tabela — o suficiente para reordenar um empate próximo em `q18` sem nenhuma tabela estar entre os 5 recuperados nesse caso. Isso é relevante para as próximas etapas: qualquer mudança que adicione chunks ao índice (Etapa 3 muda o texto embedado mas não a contagem de chunks; Etapa 4 só reordena, não adiciona) tem menos risco desse efeito colateral específico, mas vale verificar caso a caso. `src/ingest.py`, `src/prepare.py`, `src/quality.py`, `src/common.py` e os testes novos foram restaurados ao estado da Etapa 0.5 (`git checkout --`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 3; nenhum commit foi feito para a Etapa 2. A lógica de validação de tabela (`validate_table`) em si classificou corretamente os dois casos de referência — a reversão é por efeito de ranking agregado, não por a extração estar errada.
 
+### Etapa 3 — Contexto no embedding (revertida)
+
+**Mudança testada:** `build_embedding_context(doc, text)` em `src/prepare.py` prefixava o texto só no **input do embedding denso** (nunca no texto armazenado/exibido/citado) com `[Documento: <título> | Órgão: <organização> | Página: <página> | Seção: <tópico>]`, montado só a partir de metadados já existentes — sem LLM. O prefixo ficava em `metadata.embedding_context`; um novo campo `embedding_sha256` (hash do texto com prefixo) substituiu `content_sha256` como chave do cache de reembedding em `src/index.py`, para que uma mudança só de contexto (ex.: título corrigido) invalidasse a embedding cacheada — sem invalidar por mudanças de metadado irrelevantes ao embedding. 5 testes novos; `ruff` e os 78 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1` (todos os 1209 chunks reembedidos, já que o prefixo muda o hash de embedding de todos eles):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 3) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 90,625% |
+| MRR@5 documento | 0,8177 | 0,6271 |
+| Recall@5 página | 87,5% | **81,25%** |
+| MRR@5 página | 0,7083 | **0,5906** |
+| Context Precision@5 (documento) | 33,75% | 32,5% |
+| Trechos não relevantes, média | 3,3125 | 3,375 |
+
+**Regressão grande e inequívoca (não um efeito de uma única pergunta): `q02` perdeu completamente o documento/página certos (recall e MRR foram a zero), e várias outras perguntas caíram de MRR 1,0 para 0,2–0,25.** Hipótese: o modelo de embedding usado (`paraphrase-multilingual-MiniLM-L12-v2`, pequeno, 128 tokens efetivos de contexto curto) dilui o sinal semântico do próprio trecho quando um cabeçalho fixo de ~15–20 tokens (repetido, quase idêntico, em todo chunk do mesmo documento) é prefixado — pior ainda em chunks já curtos. Revertida imediatamente pela regra combinada (regressão clara em page Recall@5 e page MRR@5, não só MRR marginal como nas Etapas 1/2). `src/prepare.py`, `src/index.py` e os testes novos foram restaurados ao estado da Etapa 0.5; o índice foi reconstruído de volta antes de seguir para a Etapa 4; nenhum commit foi feito para a Etapa 3. A comparação de BM25 com/sem o prefixo, planejada como parte desta etapa, não chegou a ser feita: a regressão no embedding denso já foi suficiente para descartar a abordagem como testada.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
