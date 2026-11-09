@@ -45,16 +45,25 @@ def filter_by_evaluation_group(cases, groups):
     return [c for c in cases if c.get("evaluation_group") in groups]
 
 
-def check_evidence(cases, documents):
-    """Exclude labels when their reviewed page is missing or changed."""
+def check_evidence(cases, documents, gold="v1"):
+    """Exclude labels when their reviewed page is missing or changed.
+
+    gold="v1" checks only expected_evidence (original gabarito), exactly as before.
+    gold="v2" additionally validates additional_evidence (the Etapa 0.5 gold-standard
+    review): any hash mismatch in either list, for a verified case, marks it stale —
+    the same rule applied to both lists, never silently dropping just one item."""
     hashes = {(d["document_id"], d.get("page")): d["content_hash"] for d in documents}
     checked = []
     for case in cases:
         row = dict(case)
         if row.get("review_status") == "verified" and row.get("expected_behavior") != "abstain":
             evidence = row.get("expected_evidence", [])
-            if (not evidence or {e["document_id"] for e in evidence} != set(row.get("relevant_document_ids", []))
-                or any(hashes.get((e["document_id"], e.get("page"))) != e["content_hash"] for e in evidence)):
+            stale = (not evidence or {e["document_id"] for e in evidence} != set(row.get("relevant_document_ids", []))
+                      or any(hashes.get((e["document_id"], e.get("page"))) != e["content_hash"] for e in evidence))
+            if gold == "v2" and not stale:
+                additional = row.get("additional_evidence", [])
+                stale = any(hashes.get((e["document_id"], e.get("page"))) != e["content_hash"] for e in additional)
+            if stale:
                 row["review_status"] = "stale_or_missing_evidence"
         checked.append(row)
     return checked
@@ -65,7 +74,7 @@ def page_locator(document_id, page):
     return document_id, None if page in (None, "") else str(page)
 
 
-def evaluate(cases, retriever):
+def evaluate(cases, retriever, gold="v1"):
     scored, unanswered, excluded = [], [], []
     for case in cases:
         if case.get("review_status") != "verified":
@@ -77,21 +86,33 @@ def evaluate(cases, retriever):
         ranked = [h["metadata"]["document_id"] for h in hits]
         row = {"id": case["id"], "question": case["question"], "ranked_documents": ranked,
                "chunk_ids": [h["chunk_id"] for h in hits], "latency_ms": round(elapsed, 3)}
+        additional = case.get("additional_evidence", []) if gold == "v2" else []
         relevant = case.get("relevant_document_ids", [])
+        # v2 credit without inflating score_ranking's denominator: an alternative document
+        # that fully answers the question is remapped to the first original relevant id/page
+        # before scoring, so recall/MRR can only improve over v1, never require both to appear.
+        # The (bigger) union set is used only for context precision, where there is no
+        # denominator to inflate — it purely stops a correct alternative from looking like noise.
+        additional_doc_ids = {e["document_id"] for e in additional}
+        relevant_for_precision = list(dict.fromkeys([*relevant, *additional_doc_ids])) if additional else relevant
+        ranked_for_scoring = [relevant[0] if d in additional_doc_ids else d for d in ranked] if additional and relevant else ranked
         if case.get("expected_behavior") == "abstain":
             unanswered.append({**row, "returned_evidence": bool(hits)})
         elif relevant:
             evidence = case.get("expected_evidence", [])
             page_metrics = {}
-            context_precision_metrics = {"context_precision_at_5": context_precision_at_5(ranked, relevant),
-                                          "irrelevant_by_document": irrelevant_by_document(ranked, relevant)}
+            context_precision_metrics = {"context_precision_at_5": context_precision_at_5(ranked, relevant_for_precision),
+                                          "irrelevant_by_document": irrelevant_by_document(ranked, relevant_for_precision)}
             if evidence:
                 pages = [page_locator(h["metadata"]["document_id"], h["metadata"].get("page")) for h in hits]
                 expected = [page_locator(e["document_id"], e.get("page")) for e in evidence]
-                page_metrics = {f"page_{key}": value for key, value in score_ranking(pages, expected).items()}
-                context_precision_metrics["page_context_precision_at_5"] = context_precision_at_5(pages, expected)
+                additional_pages = {page_locator(e["document_id"], e.get("page")) for e in additional}
+                expected_for_precision = list(dict.fromkeys([*expected, *additional_pages])) if additional else expected
+                pages_for_scoring = [expected[0] if p in additional_pages else p for p in pages] if additional and expected else pages
+                page_metrics = {f"page_{key}": value for key, value in score_ranking(pages_for_scoring, expected).items()}
+                context_precision_metrics["page_context_precision_at_5"] = context_precision_at_5(pages, expected_for_precision)
                 row["ranked_pages"] = pages
-            scored.append({**row, **score_ranking(ranked, relevant), **page_metrics, **context_precision_metrics})
+            scored.append({**row, **score_ranking(ranked_for_scoring, relevant), **page_metrics, **context_precision_metrics})
         else:
             excluded.append(case["id"])
     metrics = {key: mean(row[key] for row in scored) for key in ("recall_at_5", "hit_rate_at_5", "mrr_at_5")} if scored else None
@@ -134,12 +155,15 @@ def main():
                         help="Arquivo JSONL de perguntas a avaliar")
     parser.add_argument("--evaluation-group", action="append", dest="evaluation_groups",
                         help="Restringe aos casos com este evaluation_group; repetível para incluir vários")
+    parser.add_argument("--gold", choices=("v1", "v2"), default="v1",
+                        help="v1 usa só expected_evidence (padrão); v2 também conta additional_evidence")
     args = parser.parse_args()
     cases = filter_by_evaluation_group(load_jsonl(args.questions), args.evaluation_groups)
     retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
     snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
-    cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"))
-    report = evaluate(cases, retriever)
+    cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"), gold=args.gold)
+    report = evaluate(cases, retriever, gold=args.gold)
+    report["gold"] = args.gold
     report["configuration"] = {"top_k": 5, "retrieval": args.retrieval,
                                "candidate_multiplier": 1 if args.retrieval == "dense" else 4,
                                "lexical": {"method": "BM25", "k1": 1.5, "b": 0.75, "rrf_constant": 60}

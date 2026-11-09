@@ -302,6 +302,62 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 
 **Duas perguntas do conjunto original regrediram** (`q06`, `q15`), ambas com `page_recall@5 = 0`. Nenhuma tem chunk do INEP entre os 5 recuperados — a causa é concorrência de fontes novas tematicamente próximas (`portaria_mte_3714_2023`, `guia_negociacao_coletiva`, `plano_nacional_igualdade`), não o INEP. O INEP ocupa 36,7% do índice (444/1209 chunks) e a ONU Mulheres 19,6%; essa concentração é esperada em uma base com documentos de tamanhos muito desiguais e **fica registrada como limitação**, não corrigida nesta entrega — qualquer melhoria de chunking para tabelas/documentos grandes é tratada em uma branch separada (`feat/chunking-tabelas`), depois do PR desta entrega, sem alterar `content`/`content_hash` dos documentos já avaliados.
 
+## Qualidade da base — branch `feat/qualidade-base`, 09/11/2026
+
+PR aberto a partir da `main` (já com o PR #14 mergeado). Regras: `content`/`content_hash` dos documentos nunca mudam; toda melhoria acontece na camada de chunking/indexação/busca; medição sempre com `--evaluation-group` (original+development) e holdout só agregado, no fim.
+
+### Etapa 0 — Diagnóstico (sem mudar código)
+
+- **Intrusão por documento** (22 perguntas original+development, sem holdout): o maior invasor do top 5 é `guia_negociacao_coletiva` (18 chunks não relevantes), seguido de `portaria_mte_3714_2023` (13) e `cartilha_igualdade_salarial` (6). **INEP (2) e ONU Mulheres (4) são baixos** — o peso delas no volume do índice (36,7%/19,6%) não se traduz em intrusão real no top 5.
+- **Mapeamento Unicode quebrado**, varredura de todos os PDFs ativos (critério refinado para não contar pontuação legítima como •, –, —, aspas curvas como ilegível): **INEP, 106 de 108 páginas com algum trecho ilegível** (sobretudo o cabeçalho repetido "RESUMO TÉCNICO DO CENSO... 2024" e sufixos de legenda de gráfico — a prosa e os números substantivos extraem corretos, confirmado em `docs/validation_metrics.json`) e **`diretrizes_planos_acao`, 8 de 11 páginas**. Os demais PDFs (cartilha, DIEESE, IBGE, guia, ONU Mulheres, OT SIT, portaria) não têm corrupção real. Em `diretrizes_planos_acao`, confirmado um **deslocamento fixo de código de caractere (-5)**: `chr(ord(c) - 5)` decodifica "XJWFUWJXJSYFITSTUWF_T" para "SERAPRESENTADONOPRAZO..." perfeitamente. O INEP usa um encoding diferente (faixa Cirílica, não decodificável pelo mesmo shift simples) — **não há correção única para os dois**; não decodificado nesta etapa (ver "Próximos passos").
+- **Tabelas** (`find_tables()`): INEP 86/108 páginas com tabela (94 tabelas), IBGE 9/15 (29 tabelas), ONU Mulheres 7/28 (8 tabelas), **DIEESE 0/16 — a tabela da p. 13 (Total/Ensino Superior/Cargos de direção, causa provável do erro de atribuição p.12/p.13) é na verdade um gráfico de barras com números soltos, sem estrutura de grade**; `find_tables()` não a detecta. Também há **falsos positivos** (IBGE p. 6: um gráfico detectado como pseudo-tabela com valores duplicados sem sentido) — qualquer uso de `find_tables()` na Etapa 2 precisa validar antes de aceitar.
+- **Ruído em chunks**: ~100 chunks do INEP (de ~444) começam com o cabeçalho ilegível repetido, ~1 por página. Sequência de eixo de gráfico como chunk inteiro é rara (1 caso claro).
+- **Por que a ONU Mulheres gera tantos chunks**: não é ruído — é um documento longo (28 páginas, 107.217 caracteres), chunking proporcional ao tamanho como qualquer outro documento.
+- **5 perguntas de desenvolvimento criadas** (`q27`–`q31`, evaluation_group `development`, gabarito conferido): 3 de tabela (IBGE p. 4, razão M/H diretores e gerentes 73,9%; INEP p. 51, mediana de idade presencial 25; DIEESE p. 13, rendimento homens cargos de direção R$ 10.492) e 2 só-gráfico (IBGE p. 1, mulheres com ensino superior completo 21,3%, sem frase de prosa restatando; DIEESE p. 13, rendimento mulheres ensino superior R$ 5.409, não restatado em prosa nesta página). Todas já tinham Recall@5 = 100% na main atual antes de qualquer melhoria — **servem como verificação de não-regressão para as etapas seguintes, não como medida de ganho.**
+
+**Expectativa registrada antes de medir qualquer etapa:** as Etapas 3 (contexto no embedding) e 4 (limite por documento) são as que atacam a invasão de `guia_negociacao_coletiva`/`portaria_mte_3714_2023`; as Etapas 1 (ruído) e 2 (tabelas) melhoram a qualidade dos chunks e podem não mexer nas métricas agregadas atuais.
+
+### Etapa 0.5 — Revisão do gabarito com regra fixa
+
+**Motivo:** o gabarito original (v1) foi escrito com 5 fontes, marcando um único documento/página como relevante; com 20 fontes, outro documento pode responder corretamente à mesma pergunta e hoje contar como erro de recuperação, quando na verdade é um artefato de medição.
+
+**Regra fixa:** um par (documento, página) é relevante se o `content` da página contém, de forma explícita, a informação que responde à pergunta — mencionar o tema não basta. Se a pergunta cita uma fonte específica ("Segundo a cartilha...", "Segundo o Guia..."), só essa fonte é relevante; não se acrescenta alternativa. O gabarito v1 nunca é removido nem rebaixado, só se pode acrescentar.
+
+**Seleção das perguntas revisadas:** não foram revisadas as 43 perguntas nem só as com recall imperfeito (isso usaria o resultado para selecionar, o que a regra proíbe para o holdout). Critério final:
+- **Original + development:** revisadas as que têm `page_recall_at_5 < 1` OU `page_mrr_at_5 < 1` na main atual, excluindo as que citam uma fonte específica no enunciado (pela regra, não têm o que acrescentar). Resultado: **2 perguntas** (`q05`, `q06`).
+- **Holdout:** revisadas **todas as 16** que não citam fonte específica no enunciado — sem olhar ranking nem métricas (holdout nunca é selecionado pelo resultado).
+
+**Pooling:** para cada uma das 18 perguntas selecionadas, top 10 de 4 buscas (híbrida atual, só densa, só BM25, e o snapshot do índice de 5 fontes, que ainda existe em `.chroma/`), deduplicado por (documento, página) — **370 candidatos únicos no total**. Acima do limite de ~150 acordado, então os candidatos foram agrupados por pergunta e priorizados por posição (rank ≤ 3 em qualquer uma das 4 buscas e fora do gabarito atual): **112 prioritários**, revisados com trecho literal e decisão; os demais 258 listados só por título/página.
+
+**Resultado da revisão:** **9 acréscimos aprovados**, registrados como `additional_evidence` (gabarito v2) nas perguntas `q05`, `q06`, `h01`, `h04`, `h08`, `h12`, `h13`, `h14`, `h16`:
+
+| Pergunta | Documento/página | Achado |
+| --- | --- | --- |
+| q05 | `guia_negociacao_coletiva` p. 20 | Nomeia explicitamente os dois sistemas de dados (RAIS/eSocial e Portal Emprega Brasil) |
+| q06 | `portaria_mte_3714_2023` p. 1 | Seção I da Portaria (itens a-d), a lista completa de "dados extraídos do eSocial" |
+| h01 | `guia_negociacao_coletiva` p. 22 | Multa explícita (3% da folha, limitada a 100 salários mínimos) por não cumprir a divulgação |
+| h04 | `ot_sit_11_2024` p. 1 | Multa específica (10x, dobro em reincidência) para o cenário exato da pergunta |
+| h08 | `portaria_mte_3714_2023` p. 2 | Lista explícita de componentes da remuneração, incluindo horas extras e gorjetas (mesmo cálculo da Seção I da p. 1) |
+| h12 | `fgv_ibre_desigualdade_genero` | Rendimento de mulheres negras especificamente (61% do rendimento dos homens sem desagregação) |
+| h13 | `onu_mulheres_weps` p. 24 | "25 horas semanais contra 10 horas semanais entre homens" — referente ("afazeres domésticos") confirmado na frase anterior, mesma página |
+| h14 | `estatisticas_genero_ibge` p. 4 | Tabela de rendimento por grupo ocupacional: "Profissionais das ciências e intelectuais", 63,3% — achado no rank 4 (fora do top-3), checado por suspeita |
+| h16 | `onu_mulheres_weps` p. 24 | "A média salarial feminina corresponde a 74,5% da média salarial masculina" (Pnad 2014) |
+
+**Rejeitados com registro:** `h09` (o enunciado "em que meses as empresas têm que publicar" mistura atores — o MTE publica em março/setembro, as empresas enviam dados em fevereiro/agosto e a Portaria não especifica mês para a publicação pelas próprias empresas; nenhum trecho responde literalmente à pergunta como formulada — **o enunciado pode merecer revisão futura, não alterado agora**); `h16`/DIEESE p. 13 (a associação entre os números "R$ 3.864/8.357/10.492" e "Homens"/"Mulheres" só existe na posição visual do gráfico, não no texto corrido — rejeitado pela regra); `h13`/FGV (frase sem "por semana" explícito).
+
+**Implementação (`src/evaluate.py`):** `--gold v1|v2` (padrão v1, comportamento idêntico ao de antes). `check_evidence` valida o hash de `additional_evidence` também quando `gold=v2` (qualquer divergência marca o caso como `stale_or_missing_evidence`, nas duas listas). Em `evaluate()`, uma evidência adicional **não é simplesmente somada ao conjunto de documentos relevantes** — isso inflaria o denominador do Recall (`encontrados / total relevante`) e poderia *piorar* uma pergunta que já tinha nota máxima no v1, só porque a alternativa não apareceu junto da original. Em vez disso, um documento/página retornado que bate com uma evidência adicional é remapeado para o item original correspondente antes de chamar `score_ranking` (que não foi alterado): o Recall/MRR do v2 nunca fica pior que o v1 para o mesmo caso, só pode melhorar. O conjunto maior (original + adicional) é usado só no Context Precision, que não tem denominador para inflar. Testes cobrem: v1 ignora `additional_evidence` por completo; v2 aceita a evidência adicional; v2 nunca fica peor que v1 quando o documento original já é encontrado; hash divergente marca o caso como stale nas duas listas de evidência.
+
+**Medição real, v1 × v2 (0 `stale_or_missing_evidence` em todas as linhas):**
+
+| Conjunto | Casos | Recall@5 doc | MRR@5 doc | Recall@5 página | MRR@5 página | Context Precision (doc) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original+dev, v1 | 27 | 96,30% | 0,8241 | 92,59% | 0,7130 | 42,96% |
+| Original+dev, v2 | 27 | 96,30% | 0,8272 | **96,30%** | 0,7284 | 45,19% |
+| Holdout, v1 | 16 | 87,5% | 0,5302 | 78,13% | 0,4469 | 33,75% |
+| Holdout, v2 | 16 | **90,63%** | **0,5615** | **84,38%** | **0,5094** | 38,75% |
+
+Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No holdout — nunca usado para decidir nada — o v2 já recupera uma parte real da queda de 5 para 20 fontes**: MRR@5 por página sobe de 0,4469 para 0,5094 (+14%) só corrigindo o gabarito, sem qualquer mudança de chunking/busca ainda.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
@@ -313,3 +369,5 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 - Remover, na camada de chunking (`src/prepare.py`), o cabeçalho repetido ilegível do INEP ("RESUMO TÉCNICO DO CENSO... 2024"), sem alterar o `content` da página.
 - Avaliar a Sinopse Estatística oficial do Censo da Educação Superior em planilha (zip de 397 MB, `download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip`) como fonte numericamente mais confiável para perguntas estatísticas sobre o censo.
 - Nova tentativa de geração guiada pelo motivo do validador: ao receber `CitationValidationError`, tentar novamente (1 retry) devolvendo ao modelo a mensagem exata do validador (ex.: "LLM answer contains an uncited paragraph: remova ou cite esse parágrafo"), em vez de bloquear direto. Sem afrouxar `validate_citations`. Não implementado nesta sessão; precisa de aprovação antes.
+- Decodificar o deslocamento de código de caractere (-5) em `diretrizes_planos_acao`, em PR próprio: identificar os spans afetados pelo nome da fonte defeituosa em `page.get_text("dict")` (não por heurística de texto), revisar a evidência das páginas afetadas e atualizar os hashes do gabarito com registro — não feito nesta branch porque mudaria `content`/`content_hash` e o gabarito de `q23`.
+- Revisar o enunciado de `h09` (mistura MTE/empresas/meses), identificado na Etapa 0.5 mas não alterado.
