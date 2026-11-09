@@ -468,6 +468,46 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 **Leitura agregada:** em nenhuma etapa o gabarito v2 piorou em relação ao v1 correspondente (confirma de novo a invariante de design da Etapa 0.5), e a ordem de severidade da regressão de MRR@5 por página é a mesma nos dois gabaritos (Etapa 3 > Etapa 4 > Etapa 1 > Etapa 2); por Recall@5 de página, Etapas 3 e 4 empatam como as duas únicas com queda (−6,25 pp cada). Isso sustenta que as regressões são do retrieval/chunking em si, não um artefato do gabarito usado para medir.
 
+## Medição final
+
+### `main` × esta branch (recomendação: Etapa 0.5, gabarito v2 — nenhuma das Etapas 1-4 sobreviveu)
+
+Como nenhuma das quatro etapas de chunking/retrieval tentadas sobreviveu ao critério de reversão, o índice e o código de recuperação desta branch são **idênticos aos de `main`** no PR anterior; a única mudança real é o gabarito (`additional_evidence`, `--gold v2`) e a documentação/diagnóstico. A tabela "Comparação justa" (Etapa 0 acima) já é, portanto, `main` (v1, única opção ali) contra esta branch (v1); a tabela abaixo acrescenta a leitura v2, que é a recomendação final:
+
+| Métrica (top 5), 16 originais | `main` (v1) | Esta branch (v2) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8229 |
+| Recall@5 página | 87,5% | **93,75%** |
+| MRR@5 página | 0,7083 | **0,7344** |
+| Context Precision@5 (documento) | 33,75% | 37,5% |
+
+### Holdout (16 perguntas), medido uma única vez — já registrado na Etapa 0.5, não remedido aqui
+
+| Conjunto | Recall@5 doc | MRR@5 doc | Recall@5 página | MRR@5 página |
+| --- | ---: | ---: | ---: | ---: |
+| Holdout, v1 | 87,5% | 0,5302 | 78,13% | 0,4469 |
+| Holdout, v2 | **90,63%** | **0,5615** | **84,38%** | **0,5094** |
+
+### Quanto da queda (5→20 fontes) era medição e quanto era busca
+
+Da queda de MRR@5 por página nas 16 perguntas originais ao ir de 5 para 20 fontes (0,8021 → 0,7083, -11,7%), corrigir só o gabarito para contar evidência alternativa válida (`--gold v2`, sem tocar em busca ou chunking) recupera 0,0261 — **28% da queda**. Os 72% restantes (0,0677; o MRR com v2 ainda fica em 0,7344, abaixo do 0,8021 original) são recuperação real: mais fontes tematicamente próximas competindo pelo top 5, não um artefato de medição. As quatro tentativas de fechar essa diferença nesta branch (ruído, tabelas, contexto no embedding, limite por documento) pioraram a métrica de página em vez de recuperá-la e foram todas revertidas — a recomendação é manter a base de 20 fontes com gabarito v2, sem mudança de chunking/retrieval nesta entrega.
+
+### Distribuição de distância (sugestão de `--max-distance`, não ativada)
+
+Distância cosseno dos 5 chunks recuperados por pergunta (original + desenvolvimento, 27 casos verificados), separando chunks relevantes dos irrelevantes:
+
+| Grupo | n | mín | p25 | mediana | p75 | máx |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Relevantes | 58 | 0,1417 | 0,2746 | 0,3205 | 0,3648 | 0,5961 |
+| Irrelevantes | 77 | 0,1636 | 0,2773 | 0,3197 | 0,3747 | 0,6936 |
+
+**As duas distribuições se sobrepõem quase totalmente (mediana e p25/p75 praticamente iguais)** — não há um limiar que separe relevante de irrelevante sem também descartar recuperações corretas. Um corte em `--max-distance 0,65` filtraria só os casos mais extremos de irrelevância (distâncias de até 0,6936) sem tocar em nenhuma distância relevante observada (máximo 0,5961), mas o ganho esperado é pequeno dado a sobreposição. **Sugestão registrada, não ativada**: o valor-padrão permanece sem corte; ativar um `--max-distance` mais agressivo exigiria uma base mais diversificada para calibrar sem arriscar recall, como já apontado nas pendências abaixo.
+
+### Verificação de fidelidade com LLM real (demo oficial, versão recomendada)
+
+Não repetida nesta sessão: como a versão recomendada (Etapa 0.5, gabarito v2) tem exatamente o mesmo índice/código de recuperação e geração já aceitos na rodada oficial do PR anterior (nenhuma das Etapas 1-4 mudou `src/query.py`'s `generate`/`validate_citations`, que não foram tocados nesta branch), a rodada de demo já registrada em `docs/validation_report.md` (seção da Etapa anterior, modelo `gemini-3.5-flash-lite`, 3/5 respondidas) permanece válida como a verificação de fidelidade mais recente. O erro de atribuição DIEESE p.12/p.13 mencionado ali não foi reavaliado nesta branch porque nenhuma mudança de chunking sobreviveu que pudesse tê-lo corrigido.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
