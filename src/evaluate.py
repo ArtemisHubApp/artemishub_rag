@@ -38,6 +38,13 @@ def irrelevant_by_document(retrieved, relevant):
     return counts
 
 
+def filter_by_evaluation_group(cases, groups):
+    """Keep only cases whose evaluation_group is in groups; groups=None/[] keeps everything."""
+    if not groups:
+        return cases
+    return [c for c in cases if c.get("evaluation_group") in groups]
+
+
 def check_evidence(cases, documents):
     """Exclude labels when their reviewed page is missing or changed."""
     hashes = {(d["document_id"], d.get("page")): d["content_hash"] for d in documents}
@@ -128,9 +135,7 @@ def main():
     parser.add_argument("--evaluation-group", action="append", dest="evaluation_groups",
                         help="Restringe aos casos com este evaluation_group; repetível para incluir vários")
     args = parser.parse_args()
-    cases = load_jsonl(args.questions)
-    if args.evaluation_groups:
-        cases = [c for c in cases if c.get("evaluation_group") in args.evaluation_groups]
+    cases = filter_by_evaluation_group(load_jsonl(args.questions), args.evaluation_groups)
     retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
     snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
     cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"))

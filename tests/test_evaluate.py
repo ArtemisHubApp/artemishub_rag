@@ -1,6 +1,13 @@
 import pytest
 
-from src.evaluate import check_evidence, context_precision_at_5, evaluate, irrelevant_by_document, score_ranking
+from src.evaluate import (
+    check_evidence,
+    context_precision_at_5,
+    evaluate,
+    filter_by_evaluation_group,
+    irrelevant_by_document,
+    score_ranking,
+)
 
 
 def test_metrics_have_correct_denominators_and_ranks():
@@ -46,6 +53,22 @@ def test_html_null_page_matches_chroma_empty_page():
     report = evaluate(cases, HtmlRetriever())
     assert report['page_metrics']['page_recall_at_5'] == 1
     assert report['page_metrics']['page_hit_rate_at_5'] == 1
+
+
+def test_filter_by_evaluation_group_keeps_matching_only():
+    cases = [{"id": "a", "evaluation_group": "answerable"},
+              {"id": "b", "evaluation_group": "development"},
+              {"id": "c", "evaluation_group": "development"},
+              {"id": "d"}]
+    assert [c["id"] for c in filter_by_evaluation_group(cases, ["answerable"])] == ["a"]
+    assert [c["id"] for c in filter_by_evaluation_group(cases, ["development"])] == ["b", "c"]
+    assert [c["id"] for c in filter_by_evaluation_group(cases, ["answerable", "development"])] == ["a", "b", "c"]
+
+
+def test_filter_by_evaluation_group_no_filter_keeps_everything():
+    cases = [{"id": "a", "evaluation_group": "answerable"}, {"id": "b"}]
+    assert filter_by_evaluation_group(cases, None) == cases
+    assert filter_by_evaluation_group(cases, []) == cases
 
 
 def test_context_precision_counts_chunk_by_chunk_with_repeats():
