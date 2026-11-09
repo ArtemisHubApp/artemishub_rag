@@ -55,6 +55,74 @@ def test_html_null_page_matches_chroma_empty_page():
     assert report['page_metrics']['page_hit_rate_at_5'] == 1
 
 
+def test_gold_v1_ignores_additional_evidence_entirely(document):
+    class OtherDocRetriever:
+        def retrieve(self, question, top_k):
+            return [{"metadata": {"document_id": "other", "page": None}, "chunk_id": "c1"}]
+
+    case = {"id": "case", "question": "fixture", "review_status": "verified",
+            "relevant_document_ids": [document["document_id"]],
+            "expected_evidence": [{"document_id": document["document_id"], "page": None,
+                                   "content_hash": document["content_hash"]}],
+            "additional_evidence": [{"document_id": "other", "page": None, "content_hash": "wrong-hash"}]}
+    # v1 (default): additional_evidence is neither used for scoring nor validated for staleness.
+    checked = check_evidence([case], [document])
+    assert checked[0]["review_status"] == "verified"
+    report = evaluate(checked, OtherDocRetriever())
+    assert report["evaluated_cases"] == 1
+    assert report["metrics"]["recall_at_5"] == 0.0
+
+
+def test_gold_v2_accepts_additional_evidence_as_relevant(document):
+    other = {**document, "document_id": "other", "content_hash": "other-hash"}
+
+    class OtherDocRetriever:
+        def retrieve(self, question, top_k):
+            return [{"metadata": {"document_id": "other", "page": None}, "chunk_id": "c1"}]
+
+    case = {"id": "case", "question": "fixture", "review_status": "verified",
+            "relevant_document_ids": [document["document_id"]],
+            "expected_evidence": [{"document_id": document["document_id"], "page": None,
+                                   "content_hash": document["content_hash"]}],
+            "additional_evidence": [{"document_id": "other", "page": None, "content_hash": "other-hash"}]}
+    checked = check_evidence([case], [document, other], gold="v2")
+    assert checked[0]["review_status"] == "verified"
+    report = evaluate(checked, OtherDocRetriever(), gold="v2")
+    assert report["evaluated_cases"] == 1
+    assert report["metrics"]["recall_at_5"] == 1.0
+
+
+def test_gold_v2_never_worse_than_v1_when_original_doc_is_found(document):
+    """additional_evidence must never inflate the denominator score_ranking sees: if the
+    original relevant document is retrieved, v2 recall/MRR must equal v1's, never drop
+    just because an unrelated additional document wasn't also retrieved."""
+    class OriginalDocRetriever:
+        def retrieve(self, question, top_k):
+            return [{"metadata": {"document_id": document["document_id"], "page": None}, "chunk_id": "c1"}]
+
+    case = {"id": "case", "question": "fixture", "review_status": "verified",
+            "relevant_document_ids": [document["document_id"]],
+            "expected_evidence": [{"document_id": document["document_id"], "page": None,
+                                   "content_hash": document["content_hash"]}],
+            "additional_evidence": [{"document_id": "other", "page": None, "content_hash": "other-hash"}]}
+    report_v1 = evaluate([case], OriginalDocRetriever(), gold="v1")
+    report_v2 = evaluate([case], OriginalDocRetriever(), gold="v2")
+    assert report_v1["metrics"] == report_v2["metrics"]
+    assert report_v1["page_metrics"] == report_v2["page_metrics"]
+
+
+def test_gold_v2_marks_stale_on_additional_evidence_hash_mismatch(document):
+    case = {"id": "case", "review_status": "verified", "relevant_document_ids": [document["document_id"]],
+            "expected_evidence": [{"document_id": document["document_id"], "page": None,
+                                   "content_hash": document["content_hash"]}],
+            "additional_evidence": [{"document_id": "other", "page": None, "content_hash": "stale-hash"}]}
+    other = {**document, "document_id": "other", "content_hash": "current-hash"}
+    # v1 doesn't look at additional_evidence, so it stays verified.
+    assert check_evidence([case], [document, other])[0]["review_status"] == "verified"
+    # v2 validates it too, and the mismatch marks the whole case stale.
+    assert check_evidence([case], [document, other], gold="v2")[0]["review_status"] == "stale_or_missing_evidence"
+
+
 def test_filter_by_evaluation_group_keeps_matching_only():
     cases = [{"id": "a", "evaluation_group": "answerable"},
               {"id": "b", "evaluation_group": "development"},

@@ -136,16 +136,27 @@ Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas.
 
 A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões; quem mais "invade" o top 5 nas perguntas originais é o `guia_negociacao_coletiva` (17 chunks em 16 perguntas). Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
 
+**Qualidade do gabarito (`--gold v1|v2`, branch `feat/qualidade-base`):** uma revisão editorial encontrou evidência adicional válida para 9 das 43 perguntas (ex.: a `h04` pergunta o valor da multa; a Orientação Técnica SIT 11/2024 traz o valor exato, mas o gabarito original só registrava a CLT e a Lei 14.611). `--gold v2` passa a contar essa evidência sem inflar o denominador do Recall (`score_ranking` continua intocado), então v2 nunca fica pior que v1 na mesma pergunta — só pode igualar ou melhorar:
+
+| Métrica (top 5), 16 originais | `main`, gabarito v1 | Esta branch, gabarito v2 (recomendado) |
+|---|---|---|
+| Recall@5 por documento | 93,75% | 93,75% |
+| MRR@5 por documento | 0,8177 | 0,8229 |
+| Recall@5 por página | 87,5% | **93,75%** |
+| MRR@5 por página | 0,7083 | **0,7344** |
+
+Quatro tentativas de melhorar a recuperação em si nesta branch (filtrar ruído no chunking, extrair tabelas, prefixar contexto no embedding, limitar chunks por documento) foram implementadas, testadas e medidas — e todas revertidas: cada uma piorou `page_recall_at_5` e/ou `page_mrr_at_5` nas 16 perguntas originais. Nenhuma dessa mudança de código está no diff final; a tabela completa com causa provável de cada regressão está em `docs/validation_report.md`.
+
 **Holdout (16 perguntas, nunca usado para ajustar nada), antes e depois:**
 
-| Métrica (top 5) | 5 fontes (antes) | 20 fontes (depois) |
-|---|---|---|
-| Recall@5 por documento | 96,88% | 87,5% |
-| MRR@5 por documento | 0,8958 | 0,5302 |
-| Recall@5 por página | 93,75% | 78,13% |
-| MRR@5 por página | 0,7729 | 0,4469 |
+| Métrica (top 5) | 5 fontes (antes) | 20 fontes, gabarito v1 | 20 fontes, gabarito v2 (recomendado) |
+|---|---|---|---|
+| Recall@5 por documento | 96,88% | 87,5% | 90,63% |
+| MRR@5 por documento | 0,8958 | 0,5302 | 0,5615 |
+| Recall@5 por página | 93,75% | 78,13% | 84,38% |
+| MRR@5 por página | 0,7729 | 0,4469 | 0,5094 |
 
-A queda no holdout é **maior** do que no conjunto de desenvolvimento (100%/0,69 por página) — esperado, já que as perguntas de desenvolvimento citam a fonte no enunciado. O holdout, fora da amostra usada para decidir qualquer coisa, é o número que importa mais para avaliar a base de 20 fontes, e ele caiu mais do que os outros dois conjuntos sugeririam isoladamente.
+A queda no holdout é **maior** do que no conjunto de desenvolvimento (100%/0,69 por página) — esperado, já que as perguntas de desenvolvimento citam a fonte no enunciado. Do lado positivo: corrigir só o gabarito (v2, sem nenhuma mudança de busca ou chunking) já recupera parte real dessa queda no holdout (MRR por página +14%, de 0,4469 para 0,5094) — cerca de 28% da queda de MRR por página nas 16 originais era medição, não busca; os 72% restantes são recuperação real, e não foram recuperados por nenhuma das quatro tentativas desta branch.
 
 Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM foi checada manualmente em 5 perguntas fixas. O modelo de geração foi escolhido entre **3 versões fixas** (nunca um apelido `-latest`, que muda sem aviso): `gemini-3.7-flash` falhou nas 5 perguntas por timeout (~8 min, descartado), `gemini-3.5-flash` abstém em perguntas com evidência suficiente (incluindo a da multa), e **`gemini-3.5-flash-lite`** foi o escolhido (mais rápido e mais disposto a responder).
 

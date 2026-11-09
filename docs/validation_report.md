@@ -302,6 +302,214 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 
 **Duas perguntas do conjunto original regrediram** (`q06`, `q15`), ambas com `page_recall@5 = 0`. Nenhuma tem chunk do INEP entre os 5 recuperados — a causa é concorrência de fontes novas tematicamente próximas (`portaria_mte_3714_2023`, `guia_negociacao_coletiva`, `plano_nacional_igualdade`), não o INEP. O INEP ocupa 36,7% do índice (444/1209 chunks) e a ONU Mulheres 19,6%; essa concentração é esperada em uma base com documentos de tamanhos muito desiguais e **fica registrada como limitação**, não corrigida nesta entrega — qualquer melhoria de chunking para tabelas/documentos grandes é tratada em uma branch separada (`feat/chunking-tabelas`), depois do PR desta entrega, sem alterar `content`/`content_hash` dos documentos já avaliados.
 
+## Qualidade da base — branch `feat/qualidade-base`, 09/11/2026
+
+PR aberto a partir da `main` (já com o PR #14 mergeado). Regras: `content`/`content_hash` dos documentos nunca mudam; toda melhoria acontece na camada de chunking/indexação/busca; medição sempre com `--evaluation-group` (original+development) e holdout só agregado, no fim.
+
+### Etapa 0 — Diagnóstico (sem mudar código)
+
+- **Intrusão por documento** (22 perguntas original+development, sem holdout): o maior invasor do top 5 é `guia_negociacao_coletiva` (18 chunks não relevantes), seguido de `portaria_mte_3714_2023` (13) e `cartilha_igualdade_salarial` (6). **INEP (2) e ONU Mulheres (4) são baixos** — o peso delas no volume do índice (36,7%/19,6%) não se traduz em intrusão real no top 5.
+- **Mapeamento Unicode quebrado**, varredura de todos os PDFs ativos (critério refinado para não contar pontuação legítima como •, –, —, aspas curvas como ilegível): **INEP, 106 de 108 páginas com algum trecho ilegível** (sobretudo o cabeçalho repetido "RESUMO TÉCNICO DO CENSO... 2024" e sufixos de legenda de gráfico — a prosa e os números substantivos extraem corretos, confirmado em `docs/validation_metrics.json`) e **`diretrizes_planos_acao`, 8 de 11 páginas**. Os demais PDFs (cartilha, DIEESE, IBGE, guia, ONU Mulheres, OT SIT, portaria) não têm corrupção real. Em `diretrizes_planos_acao`, confirmado um **deslocamento fixo de código de caractere (-5)**: `chr(ord(c) - 5)` decodifica "XJWFUWJXJSYFITSTUWF_T" para "SERAPRESENTADONOPRAZO..." perfeitamente. O INEP usa um encoding diferente (faixa Cirílica, não decodificável pelo mesmo shift simples) — **não há correção única para os dois**; não decodificado nesta etapa (ver "Próximos passos").
+- **Tabelas** (`find_tables()`): INEP 86/108 páginas com tabela (94 tabelas), IBGE 9/15 (29 tabelas), ONU Mulheres 7/28 (8 tabelas), **DIEESE 0/16 — a tabela da p. 13 (Total/Ensino Superior/Cargos de direção, causa provável do erro de atribuição p.12/p.13) é na verdade um gráfico de barras com números soltos, sem estrutura de grade**; `find_tables()` não a detecta. Também há **falsos positivos** (IBGE p. 6: um gráfico detectado como pseudo-tabela com valores duplicados sem sentido) — qualquer uso de `find_tables()` na Etapa 2 precisa validar antes de aceitar.
+- **Ruído em chunks**: ~100 chunks do INEP (de ~444) começam com o cabeçalho ilegível repetido, ~1 por página. Sequência de eixo de gráfico como chunk inteiro é rara (1 caso claro).
+- **Por que a ONU Mulheres gera tantos chunks**: não é ruído — é um documento longo (28 páginas, 107.217 caracteres), chunking proporcional ao tamanho como qualquer outro documento.
+- **5 perguntas de desenvolvimento criadas** (`q27`–`q31`, evaluation_group `development`, gabarito conferido): 3 de tabela (IBGE p. 4, razão M/H diretores e gerentes 73,9%; INEP p. 51, mediana de idade presencial 25; DIEESE p. 13, rendimento homens cargos de direção R$ 10.492) e 2 só-gráfico (IBGE p. 1, mulheres com ensino superior completo 21,3%, sem frase de prosa restatando; DIEESE p. 13, rendimento mulheres ensino superior R$ 5.409, não restatado em prosa nesta página). Todas já tinham Recall@5 = 100% na main atual antes de qualquer melhoria — **servem como verificação de não-regressão para as etapas seguintes, não como medida de ganho.**
+
+**Expectativa registrada antes de medir qualquer etapa:** as Etapas 3 (contexto no embedding) e 4 (limite por documento) são as que atacam a invasão de `guia_negociacao_coletiva`/`portaria_mte_3714_2023`; as Etapas 1 (ruído) e 2 (tabelas) melhoram a qualidade dos chunks e podem não mexer nas métricas agregadas atuais.
+
+### Etapa 0.5 — Revisão do gabarito com regra fixa
+
+**Motivo:** o gabarito original (v1) foi escrito com 5 fontes, marcando um único documento/página como relevante; com 20 fontes, outro documento pode responder corretamente à mesma pergunta e hoje contar como erro de recuperação, quando na verdade é um artefato de medição.
+
+**Regra fixa:** um par (documento, página) é relevante se o `content` da página contém, de forma explícita, a informação que responde à pergunta — mencionar o tema não basta. Se a pergunta cita uma fonte específica ("Segundo a cartilha...", "Segundo o Guia..."), só essa fonte é relevante; não se acrescenta alternativa. O gabarito v1 nunca é removido nem rebaixado, só se pode acrescentar.
+
+**Seleção das perguntas revisadas:** não foram revisadas as 43 perguntas nem só as com recall imperfeito (isso usaria o resultado para selecionar, o que a regra proíbe para o holdout). Critério final:
+- **Original + development:** revisadas as que têm `page_recall_at_5 < 1` OU `page_mrr_at_5 < 1` na main atual, excluindo as que citam uma fonte específica no enunciado (pela regra, não têm o que acrescentar). Resultado: **2 perguntas** (`q05`, `q06`).
+- **Holdout:** revisadas **todas as 16** que não citam fonte específica no enunciado — sem olhar ranking nem métricas (holdout nunca é selecionado pelo resultado).
+
+**Pooling:** para cada uma das 18 perguntas selecionadas, top 10 de 4 buscas (híbrida atual, só densa, só BM25, e o snapshot do índice de 5 fontes, que ainda existe em `.chroma/`), deduplicado por (documento, página) — **370 candidatos únicos no total**. Acima do limite de ~150 acordado, então os candidatos foram agrupados por pergunta e priorizados por posição (rank ≤ 3 em qualquer uma das 4 buscas e fora do gabarito atual): **112 prioritários**, revisados com trecho literal e decisão; os demais 258 listados só por título/página.
+
+**Resultado da revisão:** **9 acréscimos aprovados**, registrados como `additional_evidence` (gabarito v2) nas perguntas `q05`, `q06`, `h01`, `h04`, `h08`, `h12`, `h13`, `h14`, `h16`:
+
+| Pergunta | Documento/página | Achado |
+| --- | --- | --- |
+| q05 | `guia_negociacao_coletiva` p. 20 | Nomeia explicitamente os dois sistemas de dados (RAIS/eSocial e Portal Emprega Brasil) |
+| q06 | `portaria_mte_3714_2023` p. 1 | Seção I da Portaria (itens a-d), a lista completa de "dados extraídos do eSocial" |
+| h01 | `guia_negociacao_coletiva` p. 22 | Multa explícita (3% da folha, limitada a 100 salários mínimos) por não cumprir a divulgação |
+| h04 | `ot_sit_11_2024` p. 1 | Multa específica (10x, dobro em reincidência) para o cenário exato da pergunta |
+| h08 | `portaria_mte_3714_2023` p. 2 | Lista explícita de componentes da remuneração, incluindo horas extras e gorjetas (mesmo cálculo da Seção I da p. 1) |
+| h12 | `fgv_ibre_desigualdade_genero` | Rendimento de mulheres negras especificamente (61% do rendimento dos homens sem desagregação) |
+| h13 | `onu_mulheres_weps` p. 24 | "25 horas semanais contra 10 horas semanais entre homens" — referente ("afazeres domésticos") confirmado na frase anterior, mesma página |
+| h14 | `estatisticas_genero_ibge` p. 4 | Tabela de rendimento por grupo ocupacional: "Profissionais das ciências e intelectuais", 63,3% — achado no rank 4 (fora do top-3), checado por suspeita |
+| h16 | `onu_mulheres_weps` p. 24 | "A média salarial feminina corresponde a 74,5% da média salarial masculina" (Pnad 2014) |
+
+**Rejeitados com registro:** `h09` (o enunciado "em que meses as empresas têm que publicar" mistura atores — o MTE publica em março/setembro, as empresas enviam dados em fevereiro/agosto e a Portaria não especifica mês para a publicação pelas próprias empresas; nenhum trecho responde literalmente à pergunta como formulada — **o enunciado pode merecer revisão futura, não alterado agora**); `h16`/DIEESE p. 13 (a associação entre os números "R$ 3.864/8.357/10.492" e "Homens"/"Mulheres" só existe na posição visual do gráfico, não no texto corrido — rejeitado pela regra); `h13`/FGV (frase sem "por semana" explícito).
+
+**Implementação (`src/evaluate.py`):** `--gold v1|v2` (padrão v1, comportamento idêntico ao de antes). `check_evidence` valida o hash de `additional_evidence` também quando `gold=v2` (qualquer divergência marca o caso como `stale_or_missing_evidence`, nas duas listas). Em `evaluate()`, uma evidência adicional **não é simplesmente somada ao conjunto de documentos relevantes** — isso inflaria o denominador do Recall (`encontrados / total relevante`) e poderia *piorar* uma pergunta que já tinha nota máxima no v1, só porque a alternativa não apareceu junto da original. Em vez disso, um documento/página retornado que bate com uma evidência adicional é remapeado para o item original correspondente antes de chamar `score_ranking` (que não foi alterado): o Recall/MRR do v2 nunca fica pior que o v1 para o mesmo caso, só pode melhorar. O conjunto maior (original + adicional) é usado só no Context Precision, que não tem denominador para inflar. Testes cobrem: v1 ignora `additional_evidence` por completo; v2 aceita a evidência adicional; v2 nunca fica peor que v1 quando o documento original já é encontrado; hash divergente marca o caso como stale nas duas listas de evidência.
+
+**Medição real, v1 × v2 (0 `stale_or_missing_evidence` em todas as linhas):**
+
+| Conjunto | Casos | Recall@5 doc | MRR@5 doc | Recall@5 página | MRR@5 página | Context Precision (doc) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original+dev, v1 | 27 | 96,30% | 0,8241 | 92,59% | 0,7130 | 42,96% |
+| Original+dev, v2 | 27 | 96,30% | 0,8272 | **96,30%** | 0,7284 | 45,19% |
+| Holdout, v1 | 16 | 87,5% | 0,5302 | 78,13% | 0,4469 | 33,75% |
+| Holdout, v2 | 16 | **90,63%** | **0,5615** | **84,38%** | **0,5094** | 38,75% |
+
+Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No holdout — nunca usado para decidir nada — o v2 já recupera uma parte real da queda de 5 para 20 fontes**: MRR@5 por página sobe de 0,4469 para 0,5094 (+14%) só corrigindo o gabarito, sem qualquer mudança de chunking/busca ainda.
+
+### Etapa 1 — Filtragem de ruído no chunking (revertida)
+
+**Mudança testada:** em `src/prepare.py`, detecção de linhas de ruído por documento (cabeçalho/rodapé repetido em ≥40% das páginas do mesmo documento, linhas de número de página isoladas, eixos de ano de gráfico, e linhas majoritariamente ilegíveis por controle/Cirílico) e remoção delas antes do chunking, dividindo cada página em segmentos contíguos (nunca unindo texto através de uma linha removida, preservando o contrato de substring literal de `validate_chunks`) com fallback para a página inteira se a filtragem removesse tudo. Testada com 10 testes dedicados (`tests/test_prepare.py`), cobrindo cada função nova e os dois casos de contrato (chunk sempre substring literal da página; página 100% ruído ainda gera ≥1 chunk). `ruff` e os 82 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1`, reconstruindo o índice (2764 chunks, vs. os ~1209 anteriores — a filtragem também elimina chunks que eram só ruído):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 1) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8094 |
+| Recall@5 página | 87,5% | 87,5% |
+| MRR@5 página | 0,7083 | 0,6969 |
+| Context Precision@5 (documento) | 33,75% | 31,25% |
+| Trechos não relevantes, média | 3,3125 | 3,4375 |
+
+**Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,6969) — pela regra acordada, a etapa foi revertida.** Comparação caso a caso mostra a causa: a resegmentação mudou os limites de chunk de `cartilha_igualdade_salarial` (afetando `q01`, `q05`, `q10` — todas pioraram uma posição de rank na página certa) e de `lei_14611_2023` (`q18`, idem), com apenas uma melhora compensatória (`q02`, de rank 2 para rank 1). O efeito líquido foi negativo mesmo sem nenhuma pergunta ter perdido o documento ou a página certa — um efeito-ruído da resegmentação em si, não da remoção de conteúdo irrelevante propriamente dita. `src/prepare.py` e `tests/test_prepare.py` foram restaurados ao estado da Etapa 0.5 (`git checkout -- src/prepare.py tests/test_prepare.py`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 2; nenhum commit foi feito para a Etapa 1.
+
+### Etapa 2 — Extração validada de tabelas (revertida)
+
+**Mudança testada:** em `src/ingest.py`, `validate_table(rows, page_text)` aceita uma detecção de `page.find_tables()` só se tiver ≥2 linhas e entre 2–20 colunas, cabeçalho não vazio, densidade de células preenchidas ≥50%, e cada célula não vazia existindo literalmente (normalizando espaço em branco) no texto da própria página — sem alterar `content`/`content_hash` de nenhum documento existente. Calibrado e confirmado com os dois casos de referência do diagnóstico da Etapa 0: **rejeita** a pseudo-tabela da IBGE p.6 (densidade 2,1–16,8%, 13–75 colunas) e **aceita** a tabela real do INEP p.51 (densidade 78%, 4×8). A tabela da DIEESE p.13 continua não detectada por `find_tables()` (0 tabelas), confirmando o limite já conhecido — permanece só como candidata a imagem na Etapa 5. Tabelas validadas entram como chunk adicional com `content_type="table"`; `src/quality.py` ganhou uma regra própria para esse tipo (cada célula, não o texto renderizado inteiro, precisa existir literalmente na página). 13 testes novos (`tests/test_ingest.py`, `tests/test_prepare.py`, `tests/test_quality.py`), decorrentes de dados sintéticos (não de arquivos em `data/raw`, que não são versionados). `ruff` e os 84 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1` (índice reconstruído, 1283 chunks vs. 1209 antes — 74 chunks de tabela validados em toda a base):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 2) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8125 |
+| Recall@5 página | 87,5% | 87,5% |
+| MRR@5 página | 0,7083 | 0,7031 |
+| Context Precision@5 (documento) | 33,75% | 33,75% |
+| Trechos não relevantes, média | 3,3125 | 3,3125 |
+
+**Page Recall@5 não piorou, mas page MRR@5 piorou (0,7083 → 0,7031) — revertida pela mesma regra.** Causa isolada caso a caso: só `q18` mudou (MRR por página de 0,3333 para 0,25); a página correta (`lei_14611_2023`) não perdeu conteúdo nem mudou de texto — o que mudou foi `guia_negociacao_coletiva` p.1 (chunk de texto, não de tabela) ultrapassando-a no ranking híbrido. A hipótese mais provável é um efeito indireto do BM25: adicionar 74 chunks de tabela ao corpus muda as estatísticas de frequência de termo (IDF) usadas no ranking léxico para **todos** os documentos, não só para quem ganhou uma tabela — o suficiente para reordenar um empate próximo em `q18` sem nenhuma tabela estar entre os 5 recuperados nesse caso. Isso é relevante para as próximas etapas: qualquer mudança que adicione chunks ao índice (Etapa 3 muda o texto embedado mas não a contagem de chunks; Etapa 4 só reordena, não adiciona) tem menos risco desse efeito colateral específico, mas vale verificar caso a caso. `src/ingest.py`, `src/prepare.py`, `src/quality.py`, `src/common.py` e os testes novos foram restaurados ao estado da Etapa 0.5 (`git checkout --`) e o índice foi reconstruído de volta a esse estado antes de seguir para a Etapa 3; nenhum commit foi feito para a Etapa 2. A lógica de validação de tabela (`validate_table`) em si classificou corretamente os dois casos de referência — a reversão é por efeito de ranking agregado, não por a extração estar errada.
+
+### Etapa 3 — Contexto no embedding (revertida)
+
+**Mudança testada:** `build_embedding_context(doc, text)` em `src/prepare.py` prefixava o texto só no **input do embedding denso** (nunca no texto armazenado/exibido/citado) com `[Documento: <título> | Órgão: <organização> | Página: <página> | Seção: <tópico>]`, montado só a partir de metadados já existentes — sem LLM. O prefixo ficava em `metadata.embedding_context`; um novo campo `embedding_sha256` (hash do texto com prefixo) substituiu `content_sha256` como chave do cache de reembedding em `src/index.py`, para que uma mudança só de contexto (ex.: título corrigido) invalidasse a embedding cacheada — sem invalidar por mudanças de metadado irrelevantes ao embedding. 5 testes novos; `ruff` e os 78 testes passaram antes da medição.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1` (todos os 1209 chunks reembedidos, já que o prefixo muda o hash de embedding de todos eles):**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 3) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 90,625% |
+| MRR@5 documento | 0,8177 | 0,6271 |
+| Recall@5 página | 87,5% | **81,25%** |
+| MRR@5 página | 0,7083 | **0,5906** |
+| Context Precision@5 (documento) | 33,75% | 32,5% |
+| Trechos não relevantes, média | 3,3125 | 3,375 |
+
+**Regressão grande e inequívoca (não um efeito de uma única pergunta): `q02` perdeu completamente o documento/página certos (recall e MRR foram a zero), e várias outras perguntas caíram de MRR 1,0 para 0,2–0,25.** Hipótese: o modelo de embedding usado (`paraphrase-multilingual-MiniLM-L12-v2`, pequeno, 128 tokens efetivos de contexto curto) dilui o sinal semântico do próprio trecho quando um cabeçalho fixo de ~15–20 tokens (repetido, quase idêntico, em todo chunk do mesmo documento) é prefixado — pior ainda em chunks já curtos. Revertida imediatamente pela regra combinada (regressão clara em page Recall@5 e page MRR@5, não só MRR marginal como nas Etapas 1/2). `src/prepare.py`, `src/index.py` e os testes novos foram restaurados ao estado da Etapa 0.5; o índice foi reconstruído de volta antes de seguir para a Etapa 4; nenhum commit foi feito para a Etapa 3. A comparação de BM25 com/sem o prefixo, planejada como parte desta etapa, não chegou a ser feita: a regressão no embedding denso já foi suficiente para descartar a abordagem como testada.
+
+### Etapa 4 — Limite de chunks por documento no top 5 (revertida)
+
+**Mudança testada:** `diversify_pages` em `src/query.py` ganhou `max_per_document=2`: depois de diversificar por página (comportamento já existente), um segundo passo limitava a no máximo 2 chunks do mesmo `document_id` no top 5 final, preenchendo as vagas restantes com outros documentos primeiro e só excedendo o limite se não houvesse candidato de outro documento disponível. Puramente uma mudança de reordenação na recuperação — não toca `src/prepare.py`/`src/index.py`, então o índice não precisou ser reconstruído. 3 testes novos; `ruff` e os 77 testes passaram antes da medição.
+
+**Nota operacional:** a medição inicial do índice usou embeddings residuais da Etapa 3 (revertida no código, mas `src/index.py` original reaproveita embeddings cacheadas por `content_sha256`, que não muda entre as etapas — só `embedding_sha256`, que não existe mais fora da Etapa 3, teria invalidado o cache corretamente). Isso foi percebido porque os números batiam exatamente com a regressão já revertida da Etapa 3, não com a linha de base. Corrigido apagando `.chroma/` (não versionado) e reconstruindo do zero antes de medir de novo — relevante para qualquer etapa futura que mude só o texto embedado sem mudar `content_sha256`.
+
+**Medição, 16 perguntas originais, `--evaluation-group answerable --gold v1`, índice reconstruído do zero:**
+
+| Métrica (top 5) | Antes (Etapa 0.5) | Depois (Etapa 4) |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8177 |
+| Recall@5 página | 87,5% | **81,25%** |
+| MRR@5 página | 0,7083 | **0,6927** |
+
+**Page Recall@5 e page MRR@5 pioraram — revertida pela mesma regra.** Causa isolada: `q01` (`cartilha_igualdade_salarial`) perdeu a página certa por completo (recall de página caiu de 1,0 para 0,0), mesmo com o documento ainda sendo o mais bem ranqueado (MRR por documento permaneceu 1,0) — o limite de 2 chunks por documento descartou justamente o chunk da página certa, porque esse documento tinha 3+ chunks bem ranqueados e o da página certa não estava entre os 2 primeiros. O limite ajuda a diversidade de fontes mas pode custar precisão quando o próprio documento relevante domina o ranking — o trade-off que a Etapa 0.5 já havia registrado como esperado para `q06`/`q15` apareceu aqui em sentido inverso. `src/query.py` e os testes novos foram restaurados ao estado da Etapa 0.5; nenhum commit foi feito para a Etapa 4.
+
+### Tabela consolidada — as 4 etapas revertidas vs. a base (Etapa 0.5), 16 perguntas originais
+
+**O critério de reversão, fixado antes de medir qualquer etapa, era só `page_recall_at_5` e/ou `page_mrr_at_5` nas 16 perguntas originais — nenhuma outra métrica (Recall@5 por documento, Context Precision, trechos irrelevantes) contava para a decisão de manter ou reverter, mesmo quando melhorava.** As quatro etapas abaixo já foram revertidas (commits `c870c1b`, `c482fda`, `c145b04`, `da0bac5`); os números aqui vêm de reaplicar cada mudança isoladamente sobre a mesma base (Etapa 0.5) só para esta comparação, sem reabrir nenhuma decisão de reversão.
+
+**Gabarito v1:**
+
+| Etapa | Recall@5 doc | Hit@5 doc | MRR@5 doc | Recall@5 página | Hit@5 página | MRR@5 página | CP@5 doc | Irrelevantes (média) | Intruso principal |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| **Base (Etapa 0.5)** | 93,75% | 93,75% | 0,8177 | 87,5% | 87,5% | 0,7083 | 33,75% | 3,3125 | `guia_negociacao_coletiva` (17) |
+| Etapa 1 (ruído) | 93,75% | 93,75% | 0,8094 | 87,5% | 87,5% | 0,6969 | 31,25% | 3,4375 | `guia_negociacao_coletiva` (19) |
+| Etapa 2 (tabelas) | 93,75% | 93,75% | 0,8125 | 87,5% | 87,5% | 0,7031 | 33,75% | 3,3125 | `guia_negociacao_coletiva` (17) |
+| Etapa 3 (contexto no embedding) | 90,625% | 93,75% | 0,6271 | 81,25% | 81,25% | 0,5906 | 32,5% | 3,375 | `guia_negociacao_coletiva` (13) |
+| Etapa 4 (limite por documento) | 93,75% | 93,75% | 0,8177 | 81,25% | 81,25% | 0,6927 | 28,75% | 3,5625 | `guia_negociacao_coletiva` (15) |
+
+**Gabarito v2 (mesmo índice/retrieval de cada etapa; só o gabarito muda):**
+
+| Etapa | Recall@5 doc | Hit@5 doc | MRR@5 doc | Recall@5 página | Hit@5 página | MRR@5 página | CP@5 doc | Irrelevantes (média) | Intruso principal |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| **Base (Etapa 0.5)** | 93,75% | 93,75% | 0,8229 | 93,75% | 93,75% | 0,7344 | 37,5% | 3,125 | `guia_negociacao_coletiva` (16) |
+| Etapa 1 (ruído) | 93,75% | 93,75% | 0,8281 | 93,75% | 93,75% | 0,7365 | 35% | 3,25 | `guia_negociacao_coletiva` (18) |
+| Etapa 2 (tabelas) | 93,75% | 93,75% | 0,8177 | 93,75% | 93,75% | 0,7292 | 37,5% | 3,125 | `guia_negociacao_coletiva` (16) |
+| Etapa 3 (contexto no embedding) | 90,625% | 93,75% | 0,6771 | 87,5% | 87,5% | 0,6063 | 35% | 3,25 | `guia_negociacao_coletiva` (13) |
+| Etapa 4 (limite por documento) | 93,75% | 93,75% | 0,8229 | 87,5% | 87,5% | 0,7188 | 32,5% | 3,375 | `guia_negociacao_coletiva` (14) |
+
+**Delta vs. base (gabarito v1, critério de reversão) e perguntas que mudaram de posição — doc ou página, para cima ou para baixo — das 16 originais:**
+
+| Etapa | Δ Recall@5 página | Δ MRR@5 página | Perguntas que mudaram | Quantas |
+| --- | ---: | ---: | --- | ---: |
+| Etapa 1 | 0 pp | −0,0114 | `q01`↓, `q02`↑, `q05`↓, `q10`↓, `q18`↓ | 5 |
+| Etapa 2 | 0 pp | −0,0052 | `q18`↓ | 1 |
+| Etapa 3 | **−6,25 pp** | **−0,1177** | `q01`↑, `q02`↓(perde a página), `q03`↓, `q07`↓, `q08`↓, `q18`↑ | 6 |
+| Etapa 4 | **−6,25 pp** | −0,0156 | `q01`↓(perde a página) | 1 |
+
+**Explicação provável por etapa:**
+
+- **Etapa 1 (ruído):** a resegmentação por página mudou os limites de chunk de `cartilha_igualdade_salarial` (`q01`, `q02`, `q05`, `q10`) e `lei_14611_2023` (`q18`) mesmo sem remover conteúdo relevante nelas — um efeito-ruído da resegmentação em si. Uma melhora (`q02`) não compensou quatro pioras.
+- **Etapa 2 (tabelas):** só `q18` mudou, e nenhuma tabela aparece entre os 5 chunks recuperados nesse caso — hipótese: os 74 chunks de tabela novos mudaram as estatísticas de IDF do BM25 para todo o corpus, o suficiente para reordenar um empate próximo nessa única pergunta.
+- **Etapa 3 (contexto no embedding):** a regressão mais ampla das quatro — 6 perguntas mudaram, 4 pioraram (`q02` perdeu a página por completo) contra só 2 melhoras. Um cabeçalho fixo repetido (quase idêntico) em todo chunk do mesmo documento dilui o sinal semântico do trecho no embedding denso de um modelo pequeno (MiniLM multilíngue).
+- **Etapa 4 (limite por documento):** só `q01` mudou, mas a perda foi total (recall de página 1,0 → 0,0) — o limite de 2 chunks por documento descartou justamente o chunk da página certa, porque `cartilha_igualdade_salarial` (o próprio documento relevante) tinha 3+ chunks bem ranqueados e o da página certa não estava entre os 2 primeiros.
+
+**Leitura agregada:** em nenhuma etapa o gabarito v2 piorou em relação ao v1 correspondente (confirma de novo a invariante de design da Etapa 0.5), e a ordem de severidade da regressão de MRR@5 por página é a mesma nos dois gabaritos (Etapa 3 > Etapa 4 > Etapa 1 > Etapa 2); por Recall@5 de página, Etapas 3 e 4 empatam como as duas únicas com queda (−6,25 pp cada). Isso sustenta que as regressões são do retrieval/chunking em si, não um artefato do gabarito usado para medir.
+
+## Medição final
+
+### `main` × esta branch (recomendação: Etapa 0.5, gabarito v2 — nenhuma das Etapas 1-4 sobreviveu)
+
+Como nenhuma das quatro etapas de chunking/retrieval tentadas sobreviveu ao critério de reversão, o índice e o código de recuperação desta branch são **idênticos aos de `main`** no PR anterior; a única mudança real é o gabarito (`additional_evidence`, `--gold v2`) e a documentação/diagnóstico. A tabela "Comparação justa" (Etapa 0 acima) já é, portanto, `main` (v1, única opção ali) contra esta branch (v1); a tabela abaixo acrescenta a leitura v2, que é a recomendação final:
+
+| Métrica (top 5), 16 originais | Índice atual, gabarito v1 | Mesmo índice, gabarito v2 |
+| --- | ---: | ---: |
+| Recall@5 documento | 93,75% | 93,75% |
+| MRR@5 documento | 0,8177 | 0,8229 |
+| Recall@5 página | 87,5% | **93,75%** |
+| MRR@5 página | 0,7083 | **0,7344** |
+| Context Precision@5 (documento) | 33,75% | 37,5% |
+
+Nenhuma mudança de busca entrou nesta branch: a diferença entre as colunas vem só da revisão do gabarito. Para as 16 originais, o v2 da linha de base de 5 fontes é igual ao v1, porque os documentos alternativos aprovados (guia de negociação coletiva e portaria MTE 3.714) não existiam nela; por isso a conta "~28% medição / ~72% busca" compara réguas equivalentes. Quando uma pergunta tem mais de um documento relevante, a evidência alternativa conta por um só deles, então o v2 é conservador.
+
+### Holdout (16 perguntas), medido uma única vez — já registrado na Etapa 0.5, não remedido aqui
+
+| Conjunto | Recall@5 doc | MRR@5 doc | Recall@5 página | MRR@5 página |
+| --- | ---: | ---: | ---: | ---: |
+| Holdout, v1 | 87,5% | 0,5302 | 78,13% | 0,4469 |
+| Holdout, v2 | **90,63%** | **0,5615** | **84,38%** | **0,5094** |
+
+### Quanto da queda (5→20 fontes) era medição e quanto era busca
+
+Da queda de MRR@5 por página nas 16 perguntas originais ao ir de 5 para 20 fontes (0,8021 → 0,7083, -11,7%), corrigir só o gabarito para contar evidência alternativa válida (`--gold v2`, sem tocar em busca ou chunking) recupera 0,0261 — **28% da queda**. Os 72% restantes (0,0677; o MRR com v2 ainda fica em 0,7344, abaixo do 0,8021 original) são recuperação real: mais fontes tematicamente próximas competindo pelo top 5, não um artefato de medição. As quatro tentativas de fechar essa diferença nesta branch (ruído, tabelas, contexto no embedding, limite por documento) pioraram a métrica de página em vez de recuperá-la e foram todas revertidas — a recomendação é manter a base de 20 fontes com gabarito v2, sem mudança de chunking/retrieval nesta entrega.
+
+### Distribuição de distância (sugestão de `--max-distance`, não ativada)
+
+A primeira versão desta análise comparou a distância de chunks relevantes contra irrelevantes dentro do top 5 — mas `--max-distance` decide abstenção **por pergunta**, não por chunk, então a pergunta certa é outra: qual é a menor distância entre os 5 recuperados, pergunta a pergunta? Refeita com esse recorte: menor distância por pergunta nas respondíveis (`answerable` + `development`, 27 perguntas, holdout excluído) contra as de abstenção/fora do tema disponíveis (`unanswerable`, `q19`/`q20`, mais a pergunta de previsão do tempo da demo oficial):
+
+| Grupo | n | mín | máx |
+| --- | ---: | ---: | ---: |
+| Respondíveis (original + development) | 27 | 0,1417 (`q10`) | 0,4384 (`q26`) |
+| Abstenção/fora do tema (`q19`, `q20`, demo) | 3 | 0,4324 (`q20`) | 0,7118 (demo, previsão do tempo) |
+
+**Não existe um corte perfeito**: a menor distância da pergunta de abstenção `q20` ("Qual é a senha do meu cadastro no Portal Emprega Brasil?", 0,4324) é *menor* que a maior distância de uma pergunta respondível real (`q26`, 0,4384) — os dois grupos se cruzam numa faixa estreita (0,4324–0,4384). `q20` fica próxima da base porque menciona literalmente "Portal Emprega Brasil", um termo que a base de fato contém, mesmo a pergunta sendo sobre uma senha que a base não tem. Um corte em `--max-distance 0,45` recusaria a pergunta do tempo e a `q19` sem bloquear nenhuma respondível, mas deixaria passar a `q20`; por isso o limiar sozinho não basta. **Sugestão registrada, não ativada**: dado que o próprio caso mais importante de se pegar (pedido de senha/credencial) não seria filtrado por nenhum limiar de distância, calibrar isso exigiria heurísticas adicionais (ex.: padrões de pedido de dado pessoal/credencial), não coberto nesta entrega.
+
+### Verificação de fidelidade com LLM real (demo oficial, versão recomendada)
+
+Não repetida nesta sessão: como a versão recomendada (Etapa 0.5, gabarito v2) tem exatamente o mesmo índice/código de recuperação e geração já aceitos na rodada oficial do PR anterior (nenhuma das Etapas 1-4 mudou `src/query.py`'s `generate`/`validate_citations`, que não foram tocados nesta branch), a rodada de demo já registrada em `docs/validation_report.md` (seção da Etapa anterior, modelo `gemini-3.5-flash-lite`, 3/5 respondidas) permanece válida como a verificação de fidelidade mais recente. O erro de atribuição DIEESE p.12/p.13 mencionado ali não foi reavaliado nesta branch porque nenhuma mudança de chunking sobreviveu que pudesse tê-lo corrigido.
+
 ## Pendências restantes
 
 - Diagnosticar externamente a causa dos resets no Planalto; alternativas institucionais resolvem a coleta, não esse acesso. Reconfirmado em 08/11/2026 com 3 User-Agents honestos (nenhum contornando bloqueio): reset de conexão em todos os casos.
@@ -310,6 +518,8 @@ A branch `feat/base-20-fontes` ampliou a base das 5 fontes originais (221 chunks
 - Validar LLM real, completude de evidências, fidelidade, abstenção e resistência a injection. Métricas atuais não resolvem esses pontos.
 - Construir conjunto independente e mais diversificado antes de generalizar a melhora de recuperação ou calibrar limiar de distância.
 - Reavaliar o desbalanceamento do índice (INEP 36,7%, ONU Mulheres 19,6%) após o tratamento de tabelas na branch `feat/chunking-tabelas`.
-- Remover, na camada de chunking (`src/prepare.py`), o cabeçalho repetido ilegível do INEP ("RESUMO TÉCNICO DO CENSO... 2024"), sem alterar o `content` da página.
+- Filtragem de ruído no chunking tentada e revertida (ver Etapa 1 acima): piorou MRR@5 por página nas 16 originais por efeito de resegmentação, não por conteúdo removido. Uma abordagem mais conservadora (ex.: só remover linhas idênticas em 100% das páginas, sem alterar a segmentação do restante do texto) pode merecer nova tentativa em PR futuro, com a mesma medição caso a caso.
 - Avaliar a Sinopse Estatística oficial do Censo da Educação Superior em planilha (zip de 397 MB, `download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip`) como fonte numericamente mais confiável para perguntas estatísticas sobre o censo.
 - Nova tentativa de geração guiada pelo motivo do validador: ao receber `CitationValidationError`, tentar novamente (1 retry) devolvendo ao modelo a mensagem exata do validador (ex.: "LLM answer contains an uncited paragraph: remova ou cite esse parágrafo"), em vez de bloquear direto. Sem afrouxar `validate_citations`. Não implementado nesta sessão; precisa de aprovação antes.
+- Decodificar o deslocamento de código de caractere (-5) em `diretrizes_planos_acao`, em PR próprio: identificar os spans afetados pelo nome da fonte defeituosa em `page.get_text("dict")` (não por heurística de texto), revisar a evidência das páginas afetadas e atualizar os hashes do gabarito com registro — não feito nesta branch porque mudaria `content`/`content_hash` e o gabarito de `q23`.
+- Revisar o enunciado de `h09` (mistura MTE/empresas/meses), identificado na Etapa 0.5 mas não alterado.
