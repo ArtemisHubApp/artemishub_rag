@@ -474,13 +474,15 @@ Em nenhuma linha o v2 ficou pior que o v1 (confere a invariante de design). **No
 
 Como nenhuma das quatro etapas de chunking/retrieval tentadas sobreviveu ao critério de reversão, o índice e o código de recuperação desta branch são **idênticos aos de `main`** no PR anterior; a única mudança real é o gabarito (`additional_evidence`, `--gold v2`) e a documentação/diagnóstico. A tabela "Comparação justa" (Etapa 0 acima) já é, portanto, `main` (v1, única opção ali) contra esta branch (v1); a tabela abaixo acrescenta a leitura v2, que é a recomendação final:
 
-| Métrica (top 5), 16 originais | `main` (v1) | Esta branch (v2) |
+| Métrica (top 5), 16 originais | Índice atual, gabarito v1 | Mesmo índice, gabarito v2 |
 | --- | ---: | ---: |
 | Recall@5 documento | 93,75% | 93,75% |
 | MRR@5 documento | 0,8177 | 0,8229 |
 | Recall@5 página | 87,5% | **93,75%** |
 | MRR@5 página | 0,7083 | **0,7344** |
 | Context Precision@5 (documento) | 33,75% | 37,5% |
+
+Nenhuma mudança de busca entrou nesta branch: a diferença entre as colunas vem só da revisão do gabarito. Para as 16 originais, o v2 da linha de base de 5 fontes é igual ao v1, porque os documentos alternativos aprovados (guia de negociação coletiva e portaria MTE 3.714) não existiam nela; por isso a conta "~28% medição / ~72% busca" compara réguas equivalentes. Quando uma pergunta tem mais de um documento relevante, a evidência alternativa conta por um só deles, então o v2 é conservador.
 
 ### Holdout (16 perguntas), medido uma única vez — já registrado na Etapa 0.5, não remedido aqui
 
@@ -495,14 +497,14 @@ Da queda de MRR@5 por página nas 16 perguntas originais ao ir de 5 para 20 font
 
 ### Distribuição de distância (sugestão de `--max-distance`, não ativada)
 
-Distância cosseno dos 5 chunks recuperados por pergunta (original + desenvolvimento, 27 casos verificados), separando chunks relevantes dos irrelevantes:
+A primeira versão desta análise comparou a distância de chunks relevantes contra irrelevantes dentro do top 5 — mas `--max-distance` decide abstenção **por pergunta**, não por chunk, então a pergunta certa é outra: qual é a menor distância entre os 5 recuperados, pergunta a pergunta? Refeita com esse recorte: menor distância por pergunta nas respondíveis (`answerable` + `development`, 27 perguntas, holdout excluído) contra as de abstenção/fora do tema disponíveis (`unanswerable`, `q19`/`q20`, mais a pergunta de previsão do tempo da demo oficial):
 
-| Grupo | n | mín | p25 | mediana | p75 | máx |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Relevantes | 58 | 0,1417 | 0,2746 | 0,3205 | 0,3648 | 0,5961 |
-| Irrelevantes | 77 | 0,1636 | 0,2773 | 0,3197 | 0,3747 | 0,6936 |
+| Grupo | n | mín | máx |
+| --- | ---: | ---: | ---: |
+| Respondíveis (original + development) | 27 | 0,1417 (`q10`) | 0,4384 (`q26`) |
+| Abstenção/fora do tema (`q19`, `q20`, demo) | 3 | 0,4324 (`q20`) | 0,7118 (demo, previsão do tempo) |
 
-**As duas distribuições se sobrepõem quase totalmente (mediana e p25/p75 praticamente iguais)** — não há um limiar que separe relevante de irrelevante sem também descartar recuperações corretas. Um corte em `--max-distance 0,65` filtraria só os casos mais extremos de irrelevância (distâncias de até 0,6936) sem tocar em nenhuma distância relevante observada (máximo 0,5961), mas o ganho esperado é pequeno dado a sobreposição. **Sugestão registrada, não ativada**: o valor-padrão permanece sem corte; ativar um `--max-distance` mais agressivo exigiria uma base mais diversificada para calibrar sem arriscar recall, como já apontado nas pendências abaixo.
+**Não existe um corte perfeito**: a menor distância da pergunta de abstenção `q20` ("Qual é a senha do meu cadastro no Portal Emprega Brasil?", 0,4324) é *menor* que a maior distância de uma pergunta respondível real (`q26`, 0,4384) — os dois grupos se cruzam numa faixa estreita (0,4324–0,4384). `q20` fica próxima da base porque menciona literalmente "Portal Emprega Brasil", um termo que a base de fato contém, mesmo a pergunta sendo sobre uma senha que a base não tem. Um corte em `--max-distance 0,45` deixaria `q26` passar corretamente e abstiveria corretamente de `q19` e da pergunta da demo, mas continuaria sem abster de `q20` — ou seja, mesmo o melhor corte possível não resolve esse caso específico, só os claramente fora do tema (como "previsão do tempo"). **Sugestão registrada, não ativada**: dado que o próprio caso mais importante de se pegar (pedido de senha/credencial) não seria filtrado por nenhum limiar de distância, calibrar isso exigiria heurísticas adicionais (ex.: padrões de pedido de dado pessoal/credencial), não coberto nesta entrega.
 
 ### Verificação de fidelidade com LLM real (demo oficial, versão recomendada)
 

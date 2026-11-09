@@ -136,7 +136,7 @@ Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas.
 
 A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões; quem mais "invade" o top 5 nas perguntas originais é o `guia_negociacao_coletiva` (17 chunks em 16 perguntas). Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
 
-**Qualidade do gabarito (`--gold v1|v2`, branch `feat/qualidade-base`):** uma revisão editorial encontrou evidência adicional válida para 9 das 43 perguntas (ex.: uma resposta completa que a pergunta aceita mas o gabarito original não registrava). `--gold v2` passa a contar essa evidência sem inflar o denominador do Recall (`score_ranking` continua intocado), então v2 nunca fica pior que v1 na mesma pergunta — só pode igualar ou melhorar:
+**Qualidade do gabarito (`--gold v1|v2`, branch `feat/qualidade-base`):** uma revisão editorial encontrou evidência adicional válida para 9 das 43 perguntas (ex.: a `h04` pergunta o valor da multa; a Orientação Técnica SIT 11/2024 traz o valor exato, mas o gabarito original só registrava a CLT e a Lei 14.611). `--gold v2` passa a contar essa evidência sem inflar o denominador do Recall (`score_ranking` continua intocado), então v2 nunca fica pior que v1 na mesma pergunta — só pode igualar ou melhorar:
 
 | Métrica (top 5), 16 originais | `main`, gabarito v1 | Esta branch, gabarito v2 (recomendado) |
 |---|---|---|

@@ -197,6 +197,7 @@
       "etapa4_per_document_cap": {"recall_at_5": 0.9375, "mrr_at_5": 0.8177083333333334, "page_recall_at_5": 0.8125, "page_mrr_at_5": 0.6927083333333334, "questions_changed": ["q01"]}
     },
     "measurement_vs_retrieval_split": {
+      "note": "No search/chunking change is in this branch; both columns are the same index measured with two rulers. The 5-source baseline's v2 equals its v1 for these 16 questions, since the approved alternative documents (guia_negociacao_coletiva, portaria_mte_3714_2023) did not exist in the 5-source index - so the '28% measurement / 72% retrieval' split compares equivalent rulers. gold v2 is conservative: when a question has 2+ relevant documents, an alternative counts for only one of them.",
       "page_mrr_drop_5_to_20_sources_v1": 0.09375,
       "recovered_by_gold_v2_alone": 0.0260416666666667,
       "recovered_fraction": 0.2778,
@@ -204,10 +205,10 @@
       "remaining_fraction": 0.7222
     },
     "max_distance_suggestion": {
-      "note": "Not activated; distributions overlap too much for a tight cutoff without a more diverse eval set.",
-      "relevant_chunk_distance": {"n": 58, "min": 0.1417, "p25": 0.2746, "median": 0.3205, "p75": 0.3648, "max": 0.5961},
-      "irrelevant_chunk_distance": {"n": 77, "min": 0.1636, "p25": 0.2773, "median": 0.3197, "p75": 0.3747, "max": 0.6936},
-      "suggested_value_if_activated": 0.65
+      "note": "Revised analysis: --max-distance abstains per QUESTION, not per chunk, so the right unit is the minimum distance across a question's top 5, not a chunk-level relevant-vs-irrelevant comparison (that first version is superseded). Answerable set excludes holdout. No clean cutoff exists: q20's minimum distance (0.4324, an abstention case that happens to literally mention 'Portal Emprega Brasil') is lower than q26's (0.4384, a real answerable question) - the two groups overlap in a narrow band. A 0.45 cutoff would correctly keep q26 answerable and correctly abstain on q19 and the demo's weather question, but would still fail to abstain on q20.",
+      "answerable_min_distance_per_question": {"n": 27, "min": 0.1417, "min_question": "q10", "max": 0.4384, "max_question": "q26"},
+      "abstention_min_distance_per_question": {"n": 3, "min": 0.4324, "min_question": "q20", "max": 0.7118, "max_question": "demo_weather"},
+      "activated": false
     },
     "active_index": {
       "collection": "stem_career_docs_561ffb71df724fbbaa775acea385caf1",
