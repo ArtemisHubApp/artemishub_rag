@@ -45,6 +45,7 @@ O MVP atual:
 - **Indexa** os trechos no ChromaDB com o modelo `paraphrase-multilingual-MiniLM-L12-v2`, sem apagar índices anteriores.
 - **Busca híbrida:** combina busca vetorial e BM25 com fusão RRF.
 - **Responde com citações**, usando um LLM compatível com a API de Chat Completions (opcional). Sem LLM configurado, mostra só os trechos encontrados.
+- **Gera a demonstração** (`python -m src.demo`): perguntas, trechos recuperados, resposta e fontes citadas em `reports/demo_rag.md`.
 - **Avalia a recuperação** com métricas de recall, hit rate e MRR em dois conjuntos de perguntas.
 
 ## ⚙️ Como funciona
@@ -104,6 +105,7 @@ uv run python -m src.pipeline      # coleta, prepara e indexa as fontes
 uv run python -m src.eda           # gera o perfil do dataset em reports/eda.json
 uv run python -m src.query "O que a cartilha informa sobre transparência salarial?"
 uv run python -m src.evaluate      # métricas de recuperação
+uv run python -m src.demo          # demonstração com LLM em reports/demo_rag.md
 ```
 
 A primeira execução baixa as fontes e o modelo de embeddings. Outras opções (`--skip-index`, `--allow-partial`, `--retrieval`, `--chunk-size`) estão em [`docs/rag_usage.md`](docs/rag_usage.md).
@@ -119,20 +121,40 @@ O CI roda os dois comandos em todo push para a `main` e em todo pull request.
 
 ## 📊 Resultados da avaliação
 
-Busca híbrida, chunks de 600/100, índice com 221 chunks das 5 fontes:
+Busca híbrida, chunks de 600/100, índice com 1209 chunks das 20 fontes ativas. **Comparação justa: as mesmas 16 perguntas originais, antes (5 fontes) e depois (20 fontes)** — as 6 perguntas novas (`evaluation_group: "development"`, todas citam a fonte no próprio enunciado, o que as torna mais fáceis) ficam numa linha separada, não misturadas na comparação principal:
 
-| Métrica (top 5) | Conjunto original (15 perguntas) | Holdout (16 perguntas) |
+| Métrica (top 5) | 5 fontes, 16 originais (antes) | 20 fontes, mesmas 16 originais (depois) | 20 fontes, 6 de desenvolvimento |
+|---|---|---|---|
+| Casos avaliados / stale | 16 / 0 | 16 / 0 | 6 / 0 |
+| Recall@5 por documento | 100% | 93,75% | 100% |
+| Hit rate@5 por documento | 100% | 93,75% | 100% |
+| MRR@5 por documento | 0,9583 | 0,8177 | 0,7778 |
+| Recall@5 por página | 100% | 87,5% | 100% |
+| MRR@5 por página | 0,8021 | 0,7083 | 0,6944 |
+| Context Precision@5 (documento) | 72,5% | 33,75% | 43,33% |
+| Context Precision@5 (página) | 21,25% | 17,5% | 20% |
+
+A ampliação para 20 fontes introduziu concorrência de documentos tematicamente próximos e baixou 2 das 16 perguntas originais (`q06`, `q15`); nenhuma delas tem chunks do INEP entre os 5 recuperados — o Resumo Técnico do INEP ocupa 36,7% do índice mas não causou essas regressões; quem mais "invade" o top 5 nas perguntas originais é o `guia_negociacao_coletiva` (17 chunks em 16 perguntas). Detalhes em [`docs/validation_report.md`](docs/validation_report.md).
+
+**Holdout (16 perguntas, nunca usado para ajustar nada), antes e depois:**
+
+| Métrica (top 5) | 5 fontes (antes) | 20 fontes (depois) |
 |---|---|---|
-| Recall por documento | 100% | 96,9% |
-| MRR por documento | 0,958 | 0,896 |
-| Recall por página | 100% | 93,8% |
-| MRR por página | 0,802 | 0,773 |
+| Recall@5 por documento | 96,88% | 87,5% |
+| MRR@5 por documento | 0,8958 | 0,5302 |
+| Recall@5 por página | 93,75% | 78,13% |
+| MRR@5 por página | 0,7729 | 0,4469 |
 
-Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM ainda não foi validada. Detalhes e limitações em [`docs/validation_report.md`](docs/validation_report.md).
+A queda no holdout é **maior** do que no conjunto de desenvolvimento (100%/0,69 por página) — esperado, já que as perguntas de desenvolvimento citam a fonte no enunciado. O holdout, fora da amostra usada para decidir qualquer coisa, é o número que importa mais para avaliar a base de 20 fontes, e ele caiu mais do que os outros dois conjuntos sugeririam isoladamente.
+
+Os conjuntos são pequenos, e o holdout serve só para medir versões finais, nunca para ajustar o sistema. A qualidade das respostas geradas pelo LLM foi checada manualmente em 5 perguntas fixas. O modelo de geração foi escolhido entre **3 versões fixas** (nunca um apelido `-latest`, que muda sem aviso): `gemini-3.7-flash` falhou nas 5 perguntas por timeout (~8 min, descartado), `gemini-3.5-flash` abstém em perguntas com evidência suficiente (incluindo a da multa), e **`gemini-3.5-flash-lite`** foi o escolhido (mais rápido e mais disposto a responder).
+
+Uma tentativa de corrigir, via prompt, um parágrafo de disclaimer que o modelo escrevia sem citação (e que por isso era rejeitado pelo validador) **não funcionou**: pedir ao modelo para não escrever avisos não impediu que ele continuasse escrevendo — na execução oficial seguinte, as 4 respostas que antes eram exibidas passaram a ser bloqueadas pelo mesmo motivo. As duas execuções oficiais (antes e depois da tentativa) ficam registradas em `docs/validation_report.md`, sem repetir a demo tentando acertar. Nenhuma afirmação, em nenhuma execução testada, foi encontrada sem sustentação real no contexto recuperado; um erro de atribuição de citação entre duas páginas do mesmo documento (DIEESE p.12/p.13) se repetiu em todas elas — sinal de limitação na recuperação/prompt, não de um modelo específico. Detalhes em "Fidelidade" em `docs/validation_report.md`.
 
 ## 📚 Documentação
 
 - [Arquitetura](docs/architecture.md)
+- [Base de conhecimento: fontes ativas e candidatas](docs/base_de_conhecimento.md)
 - [Uso detalhado do RAG](docs/rag_usage.md)
 - [Relatório de validação](docs/validation_report.md)
 - [Spec da orquestração](docs/superpowers/specs/2026-11-05-agent-orchestration.md) e [planos](docs/superpowers/plans/)

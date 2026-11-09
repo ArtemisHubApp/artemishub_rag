@@ -59,5 +59,102 @@
     "In-sample comparisons, no held-out evaluation",
     "Page/HTML-section metrics do not measure exact passage completeness or generated-answer fidelity",
     "Source alternatives do not certify current law or byte equivalence with unavailable Planalto"
-  ]
+  ],
+  "expansion_20_sources_2026_11_08": {
+    "note": "Primary comparison is the SAME 16 original verified questions (evaluation_group=answerable), scored before (5 sources) and after (20 sources). The 6 development questions (evaluation_group=development, added for this expansion; all name their source in the question text, so they're easier) are reported separately, never mixed into the headline numbers.",
+    "fair_comparison_16_original": {
+      "baseline_5_sources": {
+        "recall_at_5": 1.0, "hit_rate_at_5": 1.0, "mrr_at_5": 0.9583333333333334,
+        "page_recall_at_5": 1.0, "page_hit_rate_at_5": 1.0, "page_mrr_at_5": 0.8020833333333334,
+        "context_precision_at_5": 0.725, "page_context_precision_at_5": 0.2125,
+        "mean_irrelevant_chunks_at_5": 1.375,
+        "top_intruding_document": "decreto_11795_2023", "top_intruding_document_chunks": 11,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      },
+      "expansion_20_sources": {
+        "recall_at_5": 0.9375, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.8177083333333334,
+        "page_recall_at_5": 0.875, "page_hit_rate_at_5": 0.875, "page_mrr_at_5": 0.7083333333333334,
+        "context_precision_at_5": 0.3375, "page_context_precision_at_5": 0.175,
+        "mean_irrelevant_chunks_at_5": 3.3125,
+        "top_intruding_document": "guia_negociacao_coletiva", "top_intruding_document_chunks": 17,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      }
+    },
+    "development_6_20_sources": {
+      "note": "All 6 questions name their source document in the question text; recall/MRR here are not comparable to the original 16 and should not be averaged together with them.",
+      "recall_at_5": 1.0, "hit_rate_at_5": 1.0, "mrr_at_5": 0.7777777777777778,
+      "page_recall_at_5": 1.0, "page_hit_rate_at_5": 1.0, "page_mrr_at_5": 0.6944444444444444,
+      "context_precision_at_5": 0.43333333333333335, "page_context_precision_at_5": 0.2,
+      "mean_irrelevant_chunks_at_5": 2.8333333333333335,
+      "top_intruding_document": "cartilha_igualdade_salarial", "top_intruding_document_chunks": 5,
+      "evaluated_cases": 6, "stale_or_missing_evidence": 0
+    },
+    "original_plus_dev_22_mixed": {
+      "note": "Kept for reference only; mixes the original 16 (evaluation_group=answerable) with the 6 easier development questions (evaluation_group=development). Use fair_comparison_16_original and development_6_20_sources instead for any before/after claim.",
+      "recall_at_5": 0.9545454545454546,
+      "hit_rate_at_5": 0.9545454545454546,
+      "mrr_at_5": 0.8068181818181818,
+      "page_recall_at_5": 0.9090909090909091,
+      "page_hit_rate_at_5": 0.9090909090909091,
+      "page_mrr_at_5": 0.7045454545454546,
+      "evaluated_cases": 22,
+      "stale_or_missing_evidence": 0,
+      "context_precision_at_5": 0.36363636363636365,
+      "page_context_precision_at_5": 0.18181818181818182,
+      "mean_irrelevant_chunks_at_5": 3.1818181818181817,
+      "top_intruding_document": "guia_negociacao_coletiva",
+      "top_intruding_document_chunks": 18
+    },
+    "holdout_16": {
+      "note": "Never used to tune anything; measured once per index to report the out-of-sample drop. The old 5-source Chroma collection was still physically present (never deleted on republish) and could be queried directly, so a true before/after was possible here too.",
+      "baseline_5_sources": {
+        "recall_at_5": 0.96875, "hit_rate_at_5": 1.0, "mrr_at_5": 0.8958333333333334,
+        "page_recall_at_5": 0.9375, "page_hit_rate_at_5": 1.0, "page_mrr_at_5": 0.7729166666666667,
+        "context_precision_at_5": 0.525, "page_context_precision_at_5": 0.2375,
+        "mean_irrelevant_chunks_at_5": 2.375,
+        "top_intruding_document": "cartilha_igualdade_salarial", "top_intruding_document_chunks": 21,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      },
+      "expansion_20_sources": {
+        "recall_at_5": 0.875, "hit_rate_at_5": 0.9375, "mrr_at_5": 0.5302083333333333,
+        "page_recall_at_5": 0.78125, "page_hit_rate_at_5": 0.8125, "page_mrr_at_5": 0.446875,
+        "context_precision_at_5": 0.3375, "page_context_precision_at_5": 0.2,
+        "mean_irrelevant_chunks_at_5": 3.3125,
+        "top_intruding_document": "guia_negociacao_coletiva", "top_intruding_document_chunks": 14,
+        "evaluated_cases": 16, "stale_or_missing_evidence": 0
+      }
+    },
+    "mean_latency_ms": 43.223727272727274,
+    "active_index": {
+      "collection": "stem_career_docs_1f900875421b4d94ae122362246588ca",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "embedding_revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "partial": false,
+      "chunks": 1209,
+      "dataset_sha256": "36b82b776cca47854fc14019ea8fef4edcf889b091f7abf9885325b93dc7eaa3",
+      "snapshot": "snapshots/stem_career_docs_1f900875421b4d94ae122362246588ca"
+    },
+    "sources": {"active": 20, "disabled": 3},
+    "index_share": {
+      "inep_resumo_tecnico_censo_superior_2024": 0.3672,
+      "onu_mulheres_weps": 0.1960,
+      "estatisticas_genero_ibge": 0.1241
+    },
+    "regressions_vs_original_16": {
+      "q06": {"page_recall_at_5": 0.0, "inep_chunks_in_top5": 0, "onu_chunks_in_top5": 0,
+              "cause": "cartilha_igualdade_salarial doc correctly ranked but wrong page; crowded by portaria_mte_3714_2023 (2x) and guia_negociacao_coletiva"},
+      "q15": {"recall_at_5": 0.0, "page_recall_at_5": 0.0, "inep_chunks_in_top5": 0, "onu_chunks_in_top5": 1,
+              "cause": "both expected documents absent from top 5; crowded by guia_negociacao_coletiva (3x) and plano_nacional_igualdade"}
+    },
+    "limitations": [
+      "INEP PDF with fonts missing a ToUnicode CMap: part of the text is drawn with Type0/Identity-H fonts without a ToUnicode table. In those runs extraction returns unreadable characters; it's a defect in the file, not the extractor (PyMuPDF, pypdf and pdfminer.six all fail the same way). The damage is localized: it affects the header repeated on every page ('RESUMO TECNICO DO CENSO... 2024') and some chart caption suffixes. On the pages checked (4, 23 and 51), the prose, percentages and tables extract correctly (e.g. 51.2%, 29.3% and 43.0% on p. 23; the age table on p. 51). Charts are vector-drawn (no images). Sample check, not exhaustive.",
+      "Page 108 of the INEP PDF is genuinely blank (0 chars, 0 images, manually confirmed) and is excluded via known_blank_pages, not OCR'd",
+      "INEP occupies 36.7% of the chunk index but is not the cause of the 2 regressed original questions",
+      "Table-heavy content (INEP, IBGE, ONU Mulheres) is chunked as flattened running text by character count; a dedicated table-chunking pass is planned for a follow-up branch (feat/chunking-tabelas), not done in this delivery"
+    ],
+    "next_steps": [
+      "Remove the unreadable repeated INEP header at the chunking layer (src/prepare.py), not by touching page content",
+      "Evaluate the official INEP Sinopse Estatistica do Censo da Educacao Superior spreadsheet (zip, 397 MB, download.inep.gov.br/informacoes_estatisticas/sinopses_estatisticas/sinopses_educacao_superior/sinopse_educacao_superior_2024.zip) as a more numerically reliable source for statistical questions"
+    ]
+  }
 }

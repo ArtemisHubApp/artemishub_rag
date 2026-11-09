@@ -95,5 +95,263 @@
       "Estatísticas de Gênero",
       "IBGE"
     ]
+  },
+  {
+    "id": "ot_sit_11_2024",
+    "title": "Orientação Técnica SIT nº 11/2024 (multa por discriminação salarial)",
+    "organization": "Ministério do Trabalho e Emprego",
+    "url": "https://www.gov.br/trabalho-e-emprego/pt-br/assuntos/legislacao/SITn11de2024multacritriosremuneratrios.pdf",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "Orientação Técnica SIT",
+      "11/2024"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "guia_negociacao_coletiva",
+    "title": "Guia para Negociação Coletiva da Lei de Igualdade Salarial",
+    "organization": "Ministério das Mulheres e MTE",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/guia-para-negociacao-coletiva-da-lei-de-igualdade-salarial_defeso.pdf/@@display-file/file",
+    "topic": "negociacao_salarial",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "negociação coletiva"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "diretrizes_planos_acao",
+    "title": "Diretrizes para os Planos de Ação para Mitigação das Desigualdades Salariais",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/diretrizes-para-os-planos-de-acao-para-mitigacao-das-desigualdades-salariais_defeso.pdf/@@display-file/file",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "plano de ação"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "relatorio_final_gti",
+    "title": "Relatório Final do GTI de Igualdade Salarial",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/copy_of_RelatrioFinalGTIIgualdadeSalarial1.pdf",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "igualdade salarial"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "cartilha_plano_nacional",
+    "title": "Cartilha Rumo à Construção do Plano Nacional de Igualdade Salarial e Laboral",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/publicacoes/cartilha-rumo-a-construcao-do-plano-nacional-de-igualdade-salarial-e-laboral-entre-mulheres-e-homens.pdf/@@display-file/file",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": false,
+    "expected_text": [
+      "plano nacional"
+    ],
+    "note": "Desabilitada, mantida após nova checagem (08/11/2026): página 9 é genuinamente vazia (0 caracteres, 0 imagens, igual ao caso do INEP), mas a página 1 tem uma imagem de página inteira (1259x1786px, provável capa com título) cujo conteúdo não pode ser confirmado como puramente decorativo sem OCR/inspeção visual. Como não é possível garantir que a página 1 não carrega texto relevante só em forma de imagem, mantida desabilitada em vez de aplicar known_blank_pages."
+  },
+  {
+    "id": "plano_nacional_igualdade",
+    "title": "Plano Nacional de Igualdade Salarial e Laboral (página oficial)",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "Plano Nacional de Igualdade Salarial e Laboral",
+      "78 ações"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "relatorio_transparencia_pagina",
+    "title": "Relatório de Transparência Salarial (página oficial)",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/relatorio-de-transparencia-salarial",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "Relatórios Nacionais de Transparência Salarial",
+      "Decreto nº 11.795"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "agencia_gov_6_relatorio",
+    "title": "Empresas com 100 ou mais empregados devem atualizar informações para o 6º Relatório de Transparência Salarial",
+    "organization": "Agência Gov / MTE",
+    "url": "https://agenciagov.ebc.com.br/noticias/202608/empresas-com-100-ou-mais-empregados-devem-atualizar-informacoes-para-o-6o-relatorio-de-transparencia-salarial",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "6º Relatório de Transparência Salarial",
+      "Portal Emprega Brasil"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "dieese_8_marco_2026",
+    "title": "Boletim Especial 8 de Março de 2026",
+    "organization": "DIEESE",
+    "url": "https://www.dieese.org.br/boletimespecial/2026/2026mulher.pdf",
+    "topic": "mercado_trabalho",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "múltiplas formas",
+      "violência contra a mulher"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "onu_mulheres_weps",
+    "title": "Princípios de Empoderamento das Mulheres",
+    "organization": "ONU Mulheres e Pacto Global",
+    "url": "https://www.onumulheres.org.br/wp-content/uploads/2016/04/cartilha_ONU_Mulheres_Nov2017_digital.pdf",
+    "topic": "empoderamento",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "empoderamento"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "ibge_educa_mulheres",
+    "title": "As mulheres do Brasil",
+    "organization": "IBGE Educa",
+    "url": "https://educa.ibge.gov.br/jovens/materias-especiais/22052-as-mulheres-do-brasil.html",
+    "topic": "estatisticas_genero",
+    "kind": "html",
+    "enabled": false,
+    "expected_text": [
+      "mulheres"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "fgv_ibre_desigualdade_genero",
+    "title": "Panorama atual da desigualdade de gênero no Brasil (PNADC e SMT)",
+    "organization": "FGV IBRE",
+    "url": "https://blogdoibre.fgv.br/posts/panorama-atual-da-desigualdade-de-genero-no-brasil-uma-analise-partir-da-pnadc-e-da-smt",
+    "topic": "estatisticas_genero",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "Panorama atual da desigualdade de gênero",
+      "PNADC"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "meninas_digitais",
+    "title": "Programa Meninas Digitais",
+    "organization": "Sociedade Brasileira de Computação",
+    "url": "https://meninasdigitais.com.br/sobre-nos/",
+    "topic": "oportunidades_stem",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "meninas digitais"
+    ],
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "portaria_mte_3714_2023",
+    "title": "Portaria MTE nº 3.714/2023",
+    "organization": "Ministério do Trabalho e Emprego",
+    "url": "https://www.gov.br/mulheres/pt-br/acesso-a-informacao/acoes-e-programas/plano-nacional-de-igualdade-salarial-e-laboral/PORTARIAMTEN3.714DE24DENOVEMBRODE2023PORTARIAMTEN3.714DE24DENOVEMBRODE2023DOUImprensaNacional.pdf/@@display-file/file",
+    "topic": "igualdade_salarial",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "3.714",
+      "Decreto nº 11.795"
+    ],
+    "version": "Texto do Datalegis (ANTT), que cita D.O.U. de 27/11/2023, seção 1; não substitui a publicação oficial",
+    "note": "Candidata: desabilitada até validar com `python -m src.pipeline --skip-index`. Texto completo (arts. 1º a 12) hospedado em base de legislação do governo federal; link do D.O.U. em in.gov.br não encontrado. Ver docs/base_de_conhecimento.md.",
+    "alternatives": [
+      {
+        "url": "https://anttlegis.antt.gov.br/action/ActionDatalegis.php?acao=detalharAto&tipo=POR&numeroAto=00003714&seqAto=000&valorAno=2023&orgao=MTE&nomeTitulo=codigos&cod_modulo=420&cod_menu=7145",
+        "publisher": "ANTT (Datalegis)",
+        "html_selector": null,
+        "version": "Texto do Datalegis (ANTT), que cita D.O.U. de 27/11/2023, seção 1; não substitui a publicação oficial",
+        "justification": "Mantida como alternativa; URL oficial gov.br (DOU) passa a ser a principal.",
+        "equivalence_notes": "Mesmo ato normativo (Portaria MTE nº 3.714/2023); publicação oficial DOU preferível ao espelho ANTT."
+      }
+    ]
+  },
+  {
+    "id": "inep_resumo_tecnico_censo_superior_2024",
+    "title": "Resumo Técnico do Censo da Educação Superior 2024",
+    "organization": "INEP",
+    "url": "https://download.inep.gov.br/publicacoes/institucionais/avaliacoes_e_exames_da_educacao_superior/resumo_tecnico_do_censo_da_educacao_superior_2024.pdf",
+    "topic": "educacao_superior",
+    "kind": "pdf",
+    "enabled": true,
+    "expected_text": [
+      "Censo da Educação Superior"
+    ],
+    "known_blank_pages": [
+      108
+    ],
+    "note": "Ativa. Página 108 (última) tem 0 caracteres e 0 imagens (conferido manualmente); descartada via known_blank_pages. As demais 107 páginas têm texto extraível normal. Documento longo e com muitas tabelas; conferir em reports/eda.json se passa a dominar o índice. Ver docs/base_de_conhecimento.md."
+  },
+  {
+    "id": "lei_9029_1995",
+    "title": "Lei 9.029/1995 — proibição de exigência de atestados discriminatórios no emprego",
+    "organization": "Presidência da República",
+    "url": "https://www2.camara.leg.br/legin/fed/lei/1995/lei-9029-13-abril-1995-348798-normaatualizada-pl.html",
+    "topic": "igualdade_salarial",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "9.029",
+      "discriminatória"
+    ],
+    "note": "Texto atualizado pela Câmara dos Deputados (base legin); veda exigência de atestado de gravidez/esterilização e outras práticas discriminatórias no emprego."
+  },
+  {
+    "id": "lei_14457_2022",
+    "title": "Lei 14.457/2022 — Programa Emprega + Mulheres",
+    "organization": "Presidência da República",
+    "url": "https://www2.camara.leg.br/legin/fed/lei/2022/lei-14457-21-setembro-2022-793235-norma-pl.html",
+    "topic": "mercado_trabalho",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "14.457",
+      "Emprega"
+    ],
+    "note": "Texto da norma na base legin da Câmara dos Deputados; institui o Programa Emprega + Mulheres e altera a CLT."
+  },
+  {
+    "id": "gov_mulheres_dia_ciencia_fev2026",
+    "title": "Dia Internacional das Mulheres e Meninas na Ciência — Ministério das Mulheres, fevereiro/2026",
+    "organization": "Ministério das Mulheres",
+    "url": "https://www.gov.br/mulheres/pt-br/central-de-conteudos/noticias/2026/fevereiro/dia-internacional-das-mulheres-e-meninas-na-ciencia-governo-do-brasil-amplia-politicas-para-fortalecer-a-presenca-feminina-na-ciencia",
+    "topic": "oportunidades_stem",
+    "kind": "html",
+    "enabled": true,
+    "expected_text": [
+      "Dia Internacional das Mulheres e Meninas na Ciência",
+      "Asas para o Futuro"
+    ],
+    "note": "Notícia oficial de 11/02/2026 sobre o Programa Asas para o Futuro e o Prêmio Mulheres e Ciência."
   }
 ]

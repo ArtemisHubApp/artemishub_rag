@@ -13,9 +13,14 @@ from urllib.parse import urlparse
 
 import httpx
 import pymupdf
+import truststore
 from bs4 import BeautifulSoup
 
 from src.common import PROCESSED, RAW, ROOT, digest, write_jsonl
+
+# Some government hosts (e.g. download.inep.gov.br) serve a certificate chain
+# that the bundled certifi CAs can't complete, but that the OS trust store can.
+truststore.inject_into_ssl()
 
 LOG = logging.getLogger(__name__)
 MAX_BYTES = 30 * 1024 * 1024
@@ -139,11 +144,22 @@ def collect(sources, timeout=30, strict=False, publish=True, retries=2, outcomes
                         if " ".join(unicodedata.normalize("NFKC", marker).casefold().split()) not in normalized:
                             raise ValueError(f"Expected document marker missing: {marker}")
                     blank = [p["page"] for p in pages if not p["text"].strip()]
-                    if blank:
-                        raise ValueError(f"Empty pages require review/OCR: {blank}")
+                    declared_blank = set(source.get("known_blank_pages", []))
+                    undeclared_blank = [p for p in blank if p not in declared_blank]
+                    if undeclared_blank:
+                        raise ValueError(f"Empty pages require review/OCR: {undeclared_blank}")
+                    no_longer_blank = sorted(declared_blank - set(blank))
+                    if no_longer_blank:
+                        raise ValueError(
+                            f"known_blank_pages no longer blank; update config/sources.json: {no_longer_blank}")
+                    dropped_pages = sorted(declared_blank & set(blank))
+                    if dropped_pages:
+                        attempt["dropped_blank_pages"] = dropped_pages
                     source_docs = []
                     alternative_used = candidate["url"] != source["url"]
                     for page in pages:
+                        if page["page"] in declared_blank:
+                            continue
                         cleaned = re.sub(r"[ \t]+", " ", page["text"]).strip()
                         metadata = {"page": page["page"], "article": source.get("article"),
                                     "final_url": str(response.url), "payload_sha256": hashlib.sha256(payload).hexdigest(),
