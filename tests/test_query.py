@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from src import query
-from src.query import ABSTENTION, generate, normalize_citations, validate_citations
+from src.query import ABSTENTION, DISCLAIMER, generate, normalize_citations, validate_citations
 
 
 @pytest.fixture
@@ -73,13 +73,38 @@ def test_generation_mock_checks_context_and_auth(monkeypatch, hits):
         return httpx.Response(200, json={"choices": [{"message": {"content": "Resposta simulada [FONTE 1]"}}]})
 
     monkeypatch.setattr(query.httpx, "Client", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
-    assert generate("Pergunta", hits) == "Resposta simulada [FONTE 1]"
+    assert generate("Pergunta", hits) == f"Resposta simulada [FONTE 1]\n\n{DISCLAIMER}"
 
 
 def test_generation_without_credentials(monkeypatch, hits):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
     assert generate("Pergunta", hits) is None
+
+
+def _mock_generate(monkeypatch, content):
+    monkeypatch.setenv("LLM_API_KEY", "synthetic-test-key")
+    monkeypatch.setenv("LLM_MODEL", "simulated-model")
+    monkeypatch.setenv("LLM_BASE_URL", "https://llm.example.org/v1")
+    real_client = httpx.Client
+    monkeypatch.setattr(query.httpx, "Client", lambda **kw: real_client(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json={"choices": [{"message": {"content": content}}]})), **kw))
+
+
+def test_valid_answer_gets_disclaimer_appended(monkeypatch, hits):
+    _mock_generate(monkeypatch, "Resposta válida [FONTE 1]")
+    assert generate("Pergunta", hits) == f"Resposta válida [FONTE 1]\n\n{DISCLAIMER}"
+
+
+def test_abstention_does_not_get_disclaimer(monkeypatch, hits):
+    _mock_generate(monkeypatch, ABSTENTION)
+    assert generate("Pergunta", hits) == ABSTENTION
+
+
+def test_model_written_disclaimer_paragraph_still_rejected(monkeypatch, hits):
+    _mock_generate(monkeypatch, "Resposta válida [FONTE 1].\n\nAviso: isto não é aconselhamento jurídico.")
+    with pytest.raises(query.CitationValidationError, match="uncited paragraph"):
+        generate("Pergunta", hits)
 
 
 def test_page_diversity_preserves_ranking_and_fills_small_corpus():

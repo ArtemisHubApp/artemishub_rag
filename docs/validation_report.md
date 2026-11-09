@@ -156,20 +156,37 @@ Nenhum apelido `-latest` foi usado na escolha final; as 3 versões testadas fora
 
 Na pergunta da multa (Q3), o motivo exato do bloqueio foi `"LLM answer contains an uncited paragraph"` — **não é uma variação de formato de lista de fontes** (não é `;`, `e`, parênteses etc.), então não há extensão de `normalize_citations` a propor aqui. A resposta bruta barrada tinha 3 parágrafos: os dois primeiros citavam `[FONTE 2] [FONTE 3]`/`[FONTE 3]` corretamente (multa de 10x, dobro em reincidência — ambos literalmente corretos, conferidos contra a Lei 14.611/2023 art. 461 §7), mas o terceiro era um disclaimer sem nenhuma citação ("Ressalta-se que estas informações têm caráter geral e orientativo... não constituindo aconselhamento jurídico individualizado definitivo"). O validador rejeitou corretamente — é o comportamento pretendido, não um bug.
 
+### Correção de prompt: proibir disclaimers escritos pelo modelo — 09/11/2026
+
+A execução oficial de `gemini-3.5-flash-lite` acima tinha 1 resposta barrada pelo validador (Q3, multa) por causa de um parágrafo final de disclaimer sem citação. Mudança aplicada em `src/query.py`, com aprovação prévia:
+
+- O prompt do sistema passou a dizer explicitamente para o modelo **não escrever avisos, ressalvas ou disclaimers** (porque o sistema acrescenta um aviso padrão depois), mantendo a proibição de dar conclusão jurídica individualizada definitiva.
+- Depois de `validate_citations` aprovar a resposta (não antes, e sem alterar `validate_citations`), o código acrescenta um aviso fixo, em parágrafo separado: `"Aviso: informação geral baseada em fontes oficiais; não substitui orientação jurídica individual."` Em caso de abstenção, o aviso não é acrescentado.
+- Testes em `tests/test_query.py`: resposta válida recebe o aviso; abstenção não recebe; um parágrafo de aviso escrito pelo próprio modelo continua sendo rejeitado (sem tocar em `validate_citations`).
+
+**Resultado da nova execução oficial (`gemini-3.5-flash-lite`, 09/11/2026, aceita como veio): 5 perguntas · 0 respondidas com citação · 1 abstenção · 4 bloqueios do validador.** Isso é **pior**, não melhor, do que a execução anterior (3 respondidas / 1 abstenção / 1 bloqueio): as duas execuções oficiais ficam registradas abaixo para comparação, sem repetir a demo tentando "acertar":
+
+| Execução oficial | Respondidas | Abstenções | Bloqueadas pelo validador |
+| --- | ---: | ---: | ---: |
+| Antes da correção de prompt | 3 | 1 | 1 (Q3) |
+| Depois da correção de prompt | 0 | 1 | 4 (Q1, Q2, Q3, Q4) |
+
+**Causa:** a instrução "não escreva avisos... o sistema acrescenta um aviso padrão" não impediu o modelo de continuar escrevendo seu próprio parágrafo de aviso — pelo contrário, em todas as 4 respostas desta execução ele escreveu um parágrafo final nessa linha (ex.: "Aviso: informação geral baseada em fontes oficiais; não substitui orientação jurídica individual.", em alguns casos quase idêntico ao aviso que o próprio sistema acrescentaria depois). Isso é um **conflito entre a instrução do prompt e a regra de citação por parágrafo**: pedir ao modelo para não escrever avisos não garante que ele obedeça, e quando ele desobedece, a regra "todo parágrafo substantivo precisa de citação" (correta e não alterada) rejeita esse parágrafo — porque um disclaimer genérico não tem e não deve ter uma fonte específica citada. O validador funcionou exatamente como projetado nas duas execuções; o que não funcionou foi a premissa de que a instrução de prompt mudaria o comportamento do modelo. Fica registrado como limitação de prompt engineering, não revertido nesta sessão — qualquer tentativa futura de resolver isso (ex.: detectar e remover automaticamente um parágrafo final sem citação em vez de rejeitar a resposta inteira) precisa de aprovação explícita antes de implementar.
+
 ### Fidelidade (faithfulness) — avaliação manual
 
-**Avaliação manual, feita por inspeção direta, sobre apenas 5 perguntas fixas — não é uma amostra estatística, só uma checagem de sanidade qualitativa.** Tabela sobre a execução oficial (`gemini-3.5-flash-lite`).
+**Avaliação manual, feita por inspeção direta, sobre apenas 5 perguntas fixas — não é uma amostra estatística, só uma checagem de sanidade qualitativa.** Tabela sobre a execução oficial final (depois da correção de prompt), incluindo o conteúdo das respostas barradas (visível no relatório, não exibido a um usuário real).
 
 | Pergunta | Afirmação | Fonte citada | Sustentada? |
 | --- | --- | --- | --- |
-| 1. Onde faço uma denúncia? | Há canal específico para denúncias de discriminação salarial | FONTE 2 (cartilha, p. 6): "...a disponibilização de canais específicos..." | **Sim** (FONTE 3, Decreto 11.795, é citação extra, não essencial) |
-| 2. Quais empresas publicam o relatório? | Empresas de direito privado com 100+ empregados publicam o relatório | FONTE 1 (diretrizes, p. 4) **e** FONTE 4 (cartilha, p. 5): mesma periodicidade, duas fontes independentes | **Sim**, nos dois |
-| 3. Multa por pagar menos a uma mulher | Multa = 10x o salário, dobro em reincidência | FONTE 2 e FONTE 3: conferido literalmente contra a Lei 14.611/2023 art. 461 §7 | **Conteúdo sustentado, mas resposta barrada pelo validador** por um 3º parágrafo (disclaimer) sem citação — não chegou a ser exibida ao usuário |
-| 4. Quanto as mulheres ganham a menos | Pnad 2014: mulheres ganham 74,5% do salário dos homens | FONTE 2 (ONU Mulheres, p. 24) | **Sim** |
-| 4. (cont.) | Ensino superior: R$ 8.357 (homens) vs R$ 5.409 (mulheres), diferença de R$ 35.386/ano | **Citada só como FONTE 3** (DIEESE, p. 12 — sobre percentis de renda, sem esses números); o número real está em FONTE 1 (DIEESE, p. 13), que nem foi citada nesta execução | **Conteúdo correto, citação inteiramente errada** — pior que nas execuções anteriores, que ao menos citavam a FONTE certa também |
+| 1. Onde faço uma denúncia? | Canal específico para denúncias de discriminação salarial | FONTE 2 (cartilha, p. 6) **e** FONTE 3 (Decreto 11.795) | **Conteúdo sustentado, mas barrada pelo validador** pelo parágrafo de aviso escrito pelo próprio modelo, sem citação |
+| 2. Quais empresas publicam o relatório? | Empresas de direito privado com 100+ empregados publicam o relatório | FONTE 1 (diretrizes, p. 4) **e** FONTE 4 (cartilha, p. 5) | **Conteúdo sustentado, mas barrada** pelo mesmo motivo |
+| 3. Multa por pagar menos a uma mulher | Multa = 10x o salário, dobro em reincidência | FONTE 2 e FONTE 3, conferido contra a Lei 14.611/2023 art. 461 §7 | **Conteúdo sustentado, mas barrada** pelo mesmo motivo (repete da execução anterior) |
+| 4. Quanto as mulheres ganham a menos | Pnad 2014: 74,5%; Total R$3.864/R$3.042; cargos de direção R$10.492/R$7.546 | FONTE 2; FONTE 1; FONTE 1 | Sustentadas, citações corretas (mas resposta inteira barrada pelo mesmo motivo) |
+| 4. (cont.) | Ensino superior: R$8.357/R$5.409 | **Citada só como FONTE 3** (DIEESE p. 12, sem esses números); o número real está em FONTE 1 (p. 13) | Conteúdo correto, citação errada — **o erro de atribuição DIEESE p.12/p.13 se repete uma 5ª vez** |
 | 5. Previsão do tempo (fora do tema) | — | — | **Recusada corretamente** |
 
-**O erro de atribuição DIEESE p.12/p.13 apareceu nas 3 versões de modelo testadas** (`gemini-flash-lite-latest`, `gemini-3.5-flash` e `gemini-3.5-flash-lite`), sempre confundindo a mesma dupla de páginas do mesmo documento — é um sinal de que o problema está na recuperação/no prompt (as duas páginas ficam muito próximas em similaridade semântica), não em um modelo específico. **Nenhuma afirmação, em nenhuma das execuções testadas, foi encontrada sem qualquer sustentação real no contexto recuperado** — os dois tipos de falha observados (abstenção indevida com `gemini-3.5-flash`; disclaimer sem citação barrado pelo validador e citação de página errada com `gemini-3.5-flash-lite`) são sobre a forma da resposta, não sobre invenção de fatos. Amostra pequena demais (5 perguntas) para generalizar qualquer uma dessas taxas.
+**Nenhuma afirmação, em nenhuma das execuções testadas (3 modelos, 2 execuções oficiais com `gemini-3.5-flash-lite`), foi encontrada sem qualquer sustentação real no contexto recuperado.** O erro de atribuição DIEESE p.12/p.13 apareceu em todas as execuções que chegaram a citar esse trecho, independente do modelo — sinal de que o problema está na recuperação/no prompt (as duas páginas do mesmo documento ficam muito próximas em similaridade semântica), não em um modelo específico. Os problemas observados são todos sobre a forma da resposta (abstenção indevida, disclaimer sem citação, página errada dentro do mesmo documento), nunca sobre invenção de fatos. Amostra pequena demais (5 perguntas) para generalizar qualquer taxa.
 
 ### Context Precision@5 — nova métrica de recuperação
 
