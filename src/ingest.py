@@ -16,7 +16,7 @@ import pymupdf
 import truststore
 from bs4 import BeautifulSoup
 
-from src.common import PROCESSED, RAW, ROOT, digest, write_jsonl
+from src.common import PROCESSED, RAW, ROOT, digest, looks_garbled, write_jsonl
 
 # Some government hosts (e.g. download.inep.gov.br) serve a certificate chain
 # that the bundled certifi CAs can't complete, but that the OS trust store can.
@@ -41,13 +41,46 @@ def validate_url(url):
         raise ValueError("Private/reserved IP rejected")
 
 
+def rawline_char(glyph):
+    """Rawline (gov.br font) keeps glyphs in a fixed order, so the glyph id gives the letter."""
+    if 3 <= glyph <= 95:
+        return chr(glyph + 27)
+    if 160 <= glyph <= 195:
+        return chr(glyph + 60)
+    return {779: "–", 865: "fi"}.get(glyph)
+
+
+def decode_broken_glyphs(page, text):
+    for span in page.get_texttrace():
+        chars = span["chars"]
+        if not span["font"].startswith("Rawline") or not any(c[0] == 0xFFFD for c in chars):
+            continue
+        shown = "".join(chr(c[1]) if c[0] == 0xFFFD else chr(c[0]) for c in chars)
+        fixed = [rawline_char(c[1]) if c[0] == 0xFFFD else chr(c[0]) for c in chars]
+        if None in fixed:
+            continue
+        # get_text() may add spaces or line breaks inside a span, so match them loosely.
+        pattern = r"\s*".join(re.escape(ch) for ch in shown)
+        text = re.sub(pattern, lambda _: "".join(fixed), text, count=1)
+    return text
+
+
+def drop_garbled_lines(text):
+    kept = [line for line in text.splitlines() if not looks_garbled(line)]
+    return "\n".join(kept).strip(), len(text.splitlines()) - len(kept)
+
+
 def extract_pdf(payload):
     pages = []
     with pymupdf.open(stream=payload, filetype="pdf") as doc:
         for index, page in enumerate(doc, start=1):
             text = page.get_text("text").strip()
+            dropped = 0
+            if looks_garbled(text):
+                # Decode what is recoverable; drop the rest so it doesn't pollute retrieval.
+                text, dropped = drop_garbled_lines(decode_broken_glyphs(page, text))
             # Keep blank pages in audit data rather than silently losing coverage.
-            pages.append({"page": index, "text": text})
+            pages.append({"page": index, "text": text, "dropped_garbled_lines": dropped})
     return pages
 
 
@@ -162,6 +195,7 @@ def collect(sources, timeout=30, strict=False, publish=True, retries=2, outcomes
                             continue
                         cleaned = re.sub(r"[ \t]+", " ", page["text"]).strip()
                         metadata = {"page": page["page"], "article": source.get("article"),
+                                    "dropped_garbled_lines": page.get("dropped_garbled_lines", 0),
                                     "final_url": str(response.url), "payload_sha256": hashlib.sha256(payload).hexdigest(),
                                     "primary_url": source["url"], "alternative_used": alternative_used,
                                     "publisher": candidate["publisher"], "version": candidate["version"],

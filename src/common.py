@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -30,6 +31,16 @@ def write_jsonl(path, rows):
             temp_path.unlink(missing_ok=True)
             raise
     temp_path.replace(path)
+
+
+# Fonts embedded without a ToUnicode map come out as control or Cyrillic characters
+# (e.g. "HTR\x05RJYFX" instead of "com metas"); real text in this base has none of them.
+GARBLED_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\u0400-\u04ff]")
+GARBLED_RATIO = 0.005
+
+
+def looks_garbled(text):
+    return bool(text) and len(GARBLED_CHARS.findall(text)) / len(text) >= GARBLED_RATIO
 
 
 def digest(text):

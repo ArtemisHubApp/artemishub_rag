@@ -8,6 +8,13 @@ from src.prepare import prepare
 from src.quality import validate_chunks, validate_documents
 
 
+def test_garbled_text_is_rejected(document):
+    document["content"] = "Total ьюєҁяѓђ ѹѷѹѻ " * 5
+    document["content_hash"] = document["content_sha256"] = digest(document["content"])
+    with pytest.raises(ValueError, match="Garbled"):
+        validate_documents([document])
+
+
 def test_hash_and_duplicate_validation(document):
     with pytest.raises(ValueError, match="Duplicate"):
         validate_documents([document, document])

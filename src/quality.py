@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import datetime
 from urllib.parse import urlparse
 
-from src.common import digest
+from src.common import digest, looks_garbled
 
 DOCUMENT_FIELDS = ("document_id", "title", "source", "source_url", "document_type",
                    "collected_at", "content", "content_hash", "metadata")
@@ -34,6 +34,8 @@ def validate_documents(documents, minimum_chars=1, maximum_chars=2_000_000):
             raise ValueError(f"Document section too short: {doc['document_id']}")
         if len(doc["content"]) > maximum_chars:
             raise ValueError("Document section too large")
+        if looks_garbled(doc["content"]):
+            raise ValueError(f"Garbled text (broken PDF font): {doc['document_id']} page {doc.get('page')}")
         if doc["content_hash"] != digest(doc["content"]):
             raise ValueError("Invalid content_hash")
         if doc.get("content_sha256", doc["content_hash"]) != doc["content_hash"]:

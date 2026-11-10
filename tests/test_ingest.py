@@ -3,6 +3,7 @@ import pymupdf
 import pytest
 
 from src import ingest
+from src.common import looks_garbled
 
 
 def test_article_extraction_excludes_neighbors_and_revoked_text():
@@ -23,6 +24,25 @@ def test_pdf_preserves_page_numbers():
         pages = ingest.extract_pdf(pdf.tobytes())
     assert [p["page"] for p in pages] == [1, 2]
     assert "page 2" in pages[1]["text"]
+    assert all(p["dropped_garbled_lines"] == 0 for p in pages)
+
+
+def test_garbled_detection_threshold():
+    assert looks_garbled("com " + "\x05\x02\x01" * 5 + " metas")
+    assert looks_garbled("Total ьюєҁяѓђ ѹѷѹѻ")
+    assert not looks_garbled("Igualdade salarial entre mulheres e homens. " * 20 + "\x0c")
+    assert not looks_garbled("")
+
+
+def test_rawline_glyphs_decode_to_letters():
+    assert "".join(ingest.rawline_char(g) for g in (72, 84, 82, 5, 85, 87, 70, 95, 84, 88)) == "com prazos"
+    assert ingest.rawline_char(171) == "ç" and ingest.rawline_char(865) == "fi"
+    assert ingest.rawline_char(500) is None
+
+
+def test_garbled_lines_are_dropped_and_counted():
+    text, dropped = ingest.drop_garbled_lines("Texto legível\nTotal ьюєҁяѓђ\nOutra linha")
+    assert (text, dropped) == ("Texto legível\nOutra linha", 1)
 
 
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "http://localhost/a", "http://127.0.0.1", "http://169.254.169.254", "https://user:secret@example.org"])
