@@ -308,9 +308,11 @@
       "Censo da Educação Superior"
     ],
     "known_blank_pages": [
+      1,
+      2,
       108
     ],
-    "note": "Ativa. Página 108 (última) tem 0 caracteres e 0 imagens (conferido manualmente); descartada via known_blank_pages. As demais 107 páginas têm texto extraível normal. Documento longo e com muitas tabelas; conferir em reports/eda.json se passa a dominar o índice. Ver docs/base_de_conhecimento.md."
+    "note": "Ativa. Página 108 (última) tem 0 caracteres e 0 imagens (conferido manualmente). Páginas 1 e 2 (capa e ficha catalográfica) usam fonte sem mapa de caracteres e ficam vazias após remover o texto embaralhado; as três são descartadas via known_blank_pages. Nas demais, linhas embaralhadas (sobretudo números de tabelas) são removidas na extração (metadata.dropped_garbled_lines); o texto corrido é mantido. Recuperar as tabelas exige OCR (issue #18). Ver docs/base_de_conhecimento.md."
   },
   {
     "id": "lei_9029_1995",
@@ -330,13 +332,14 @@
     "id": "lei_14457_2022",
     "title": "Lei 14.457/2022 — Programa Emprega + Mulheres",
     "organization": "Presidência da República",
-    "url": "https://www2.camara.leg.br/legin/fed/lei/2022/lei-14457-21-setembro-2022-793235-norma-pl.html",
+    "url": "https://www2.camara.leg.br/legin/fed/lei/2022/lei-14457-21-setembro-2022-793235-normaatualizada-pl.html",
     "topic": "mercado_trabalho",
     "kind": "html",
     "enabled": true,
     "expected_text": [
       "14.457",
-      "Emprega"
+      "Emprega",
+      "Art. 1º"
     ],
     "note": "Texto da norma na base legin da Câmara dos Deputados; institui o Programa Emprega + Mulheres e altera a CLT."
   },
