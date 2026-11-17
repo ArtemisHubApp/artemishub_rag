@@ -8,7 +8,8 @@ de contexto recuperados (Top-5), seguindo a metodologia do RAGAS:
 - Fidelidade = (afirmações suportadas) / (total de afirmações).
 
 Uso:
-    python -m scripts.evaluate_faithfulness --respostas reports/respostas_comparacao.jsonl --saida reports/fidelidade_rag.jsonl
+    python -m scripts.evaluate_faithfulness --respostas reports/respostas_comparacao.jsonl \
+        --saida reports/fidelidade_rag.jsonl
     python -m scripts.evaluate_faithfulness   # usa os caminhos padrão em reports/
 """
 import argparse
@@ -17,36 +18,14 @@ import json
 import os
 import re
 import time
+import urllib.error
+import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
-try:
-    from src.common import ROOT, load_jsonl, write_jsonl
-except Exception:
-    ROOT = Path(__file__).resolve().parents[1]
+import httpx
 
-    def load_jsonl(path):
-        with Path(path).open(encoding="utf-8") as handle:
-            return [json.loads(line) for line in handle if line.strip()]
-
-    def write_jsonl(path, rows):
-        import tempfile
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
-            temp_path = Path(handle.name)
-            try:
-                for row in rows:
-                    handle.write(json.dumps(row, ensure_ascii=False) + "\n")
-            except Exception:
-                temp_path.unlink(missing_ok=True)
-                raise
-        temp_path.replace(path)
-
-try:
-    import httpx
-except ImportError:
-    httpx = None
+from src.common import ROOT, load_jsonl, write_jsonl
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "fidelidade_rag.jsonl"
@@ -75,7 +54,7 @@ SISTEMA_FIDELIDADE = (
     "Responda estritamente com um objeto JSON no seguinte formato, sem texto fora dele:\n"
     "{\n"
     '  "afirmacoes": [\n'
-    '    {"afirmacao": "texto da afirmação atômica", "suportada": true, "justificativa": "citação curta do trecho comprobatório"}\n'
+    '    {"afirmacao": "texto da afirmação atômica", "suportada": true, "justificativa": "citação curta"}\n'
     "  ],\n"
     '  "score": 1.0,\n'
     '  "resumo": "frase curta resumindo o resultado"\n'
@@ -121,28 +100,14 @@ def chamar_avaliador(sistema, usuario, tentativas=3):
 
     for tentativa in range(1, tentativas + 1):
         try:
-            if httpx is not None:
-                with httpx.Client(timeout=90) as client:
-                    resposta = client.post(f"{base_url}/chat/completions", json=corpo, headers=cabecalho)
-                    if resposta.status_code == 429 and tentativa < tentativas:
-                        time.sleep(10 * tentativa)
-                        continue
-                    resposta.raise_for_status()
-                    return resposta.json()["choices"][0]["message"]["content"]
-            else:
-                import urllib.request
-                import urllib.error
-                req = urllib.request.Request(
-                    f"{base_url}/chat/completions",
-                    data=json.dumps(corpo).encode("utf-8"),
-                    headers={**cabecalho, "Content-Type": "application/json", "User-Agent": "Antigravity"},
-                    method="POST"
-                )
-                with urllib.request.urlopen(req, timeout=90) as resp:
-                    dados = json.loads(resp.read().decode("utf-8"))
-                    return dados["choices"][0]["message"]["content"]
+            with httpx.Client(timeout=90) as client:
+                resposta = client.post(f"{base_url}/chat/completions", json=corpo, headers=cabecalho)
+                if resposta.status_code == 429 and tentativa < tentativas:
+                    time.sleep(10 * tentativa)
+                    continue
+                resposta.raise_for_status()
+                return resposta.json()["choices"][0]["message"]["content"]
         except Exception as exc:
-            # Erros de rede ou 429
             status = getattr(getattr(exc, "response", None), "status_code", getattr(exc, "code", None))
             if status == 429 and tentativa < tentativas:
                 time.sleep(10 * tentativa)
@@ -334,7 +299,8 @@ def main():
             resultado.update(data=dt.date.today().isoformat())
             arquivo.write(json.dumps(resultado, ensure_ascii=False) + "\n")
             arquivo.flush()
-            print(f"{resultado['id']:>4} RAG Fidelidade: {resultado.get('score_fidelidade')} ({resultado.get('veredito') or 'ERRO'})")
+            print(f"{resultado['id']:>4} RAG Fidelidade: {resultado.get('score_fidelidade')} "
+                  f"({resultado.get('veredito') or 'ERRO'})")
 
     compactar(saida_path)
     resumo = resumir(load_jsonl(saida_path))
