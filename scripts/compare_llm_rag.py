@@ -10,8 +10,8 @@ escrito linha a linha: se a execução parar no meio, rodar de novo pula o que j
 foi respondido.
 
 Uso:
-  python -m scripts.comparar_llm_rag --conjunto desenvolvimento --limite 3
-  python -m scripts.comparar_llm_rag --conjunto holdout
+  python -m scripts.compare_llm_rag --conjunto desenvolvimento --limite 3
+  python -m scripts.compare_llm_rag --conjunto holdout
 """
 import argparse
 import datetime as dt
