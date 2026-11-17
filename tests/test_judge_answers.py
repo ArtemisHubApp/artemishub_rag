@@ -2,8 +2,7 @@ import json
 
 import pytest
 
-from scripts.judge_answers import (JuizSemVeredito, compactar, julgar, ler_veredito,
-                                   marcar_citacao_invalida, resumir)
+from scripts.judge_answers import JuizSemVeredito, compactar, julgar, ler_veredito, marcar_citacao_invalida, resumir
 
 RESPONDIVEL = {"id": "h01", "expected_answer": "Multa de até 3% da folha."}
 FORA = {"id": "h17", "expected_behavior": "abstain", "criterion": "A base não tem essa informação."}
