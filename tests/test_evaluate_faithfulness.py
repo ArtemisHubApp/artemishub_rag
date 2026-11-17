@@ -1,18 +1,6 @@
 import json
-try:
-    import pytest
-except ImportError:
-    class _PytestMock:
-        class raises:
-            def __init__(self, expected_exc):
-                self.expected_exc = expected_exc
-            def __enter__(self):
-                return self
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                if exc_type is None:
-                    raise AssertionError(f"Esperava {self.expected_exc.__name__}, mas nenhuma exceção ocorreu")
-                return issubclass(exc_type, self.expected_exc)
-    pytest = _PytestMock()
+
+import pytest
 
 from scripts.evaluate_faithfulness import (
     AvaliadorSemVeredito,
@@ -54,7 +42,7 @@ def test_ler_veredito_fidelidade_lanca_erro_em_json_invalido():
         ler_veredito_fidelidade('{"afirmacoes": []}')  # falta score
 
 
-def test_avaliar_fidelidade_abstenção_recebe_score_1_sem_chamar_llm():
+def test_avaliar_fidelidade_abstencao_recebe_score_1_sem_chamar_llm():
     linha = {
         "id": "h17",
         "conjunto": "holdout",
