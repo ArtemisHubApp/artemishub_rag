@@ -24,7 +24,7 @@ from pathlib import Path
 
 import httpx
 
-from src.common import ROOT, load_jsonl
+from src.common import ROOT, load_jsonl, write_jsonl
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "notas_acerto.jsonl"
@@ -138,9 +138,7 @@ def compactar(saida):
     ultimas = {}
     for n in load_jsonl(saida):
         ultimas[(n["id"], n["condicao"])] = n
-    with saida.open("w", encoding="utf-8") as arquivo:
-        for n in ultimas.values():
-            arquivo.write(json.dumps(n, ensure_ascii=False) + "\n")
+    write_jsonl(saida, ultimas.values())
 
 
 def main():

@@ -22,7 +22,7 @@ from pathlib import Path
 
 import httpx
 
-from src.common import ROOT, load_jsonl
+from src.common import ROOT, load_jsonl, write_jsonl
 from src.query import ABSTENTION, CitationValidationError, Retriever, generate
 
 SAIDA_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
@@ -143,9 +143,7 @@ def compactar(saida):
     ultimas = {}
     for r in load_jsonl(saida):
         ultimas[(r["id"], r["condicao"])] = r
-    with saida.open("w", encoding="utf-8") as arquivo:
-        for r in ultimas.values():
-            arquivo.write(json.dumps(r, ensure_ascii=False) + "\n")
+    write_jsonl(saida, ultimas.values())
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
