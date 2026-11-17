@@ -18,13 +18,11 @@ import datetime as dt
 import json
 import os
 import re
-import time
 from collections import defaultdict
 from pathlib import Path
 
-import httpx
-
 from src.common import ROOT, load_jsonl, write_jsonl
+from src.llm_client import chamar_chat, configuracao_llm
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "notas_acerto.jsonl"
@@ -62,19 +60,7 @@ def gabarito(pergunta):
 
 
 def chamar_juiz(sistema, usuario, tentativas=3):
-    modelo = os.environ.get("JUDGE_MODEL") or os.environ["LLM_MODEL"]
-    url = os.environ["LLM_BASE_URL"].rstrip("/") + "/chat/completions"
-    corpo = {"model": modelo, "temperature": 0,
-             "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}]}
-    cabecalho = {"Authorization": f"Bearer {os.environ['LLM_API_KEY']}"}
-    for tentativa in range(1, tentativas + 1):
-        resposta = httpx.post(url, json=corpo, headers=cabecalho, timeout=90)
-        if resposta.status_code == 429 and tentativa < tentativas:
-            time.sleep(10 * tentativa)
-            continue
-        resposta.raise_for_status()
-        return resposta.json()["choices"][0]["message"]["content"]
-    raise RuntimeError("limite de tentativas")
+    return chamar_chat(sistema, usuario, modelo=os.getenv("JUDGE_MODEL"), tentativas=tentativas)
 
 
 def ler_veredito(texto):
@@ -147,7 +133,7 @@ def main():
     parser.add_argument("--saida", type=Path, default=SAIDA_PADRAO)
     args = parser.parse_args()
     respostas_arquivo, saida = ROOT / args.respostas, ROOT / args.saida
-    modelo_juiz = os.environ.get("JUDGE_MODEL") or os.environ.get("LLM_MODEL")
+    _, _, modelo_juiz = configuracao_llm(os.getenv("JUDGE_MODEL"))  # falha cedo se faltar variável
     perguntas = carregar_perguntas()
     respostas = list(load_jsonl(respostas_arquivo))
     if any(r.get("modelo") == modelo_juiz for r in respostas):

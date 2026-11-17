@@ -17,12 +17,10 @@ import argparse
 import datetime as dt
 import json
 import os
-import time
 from pathlib import Path
 
-import httpx
-
 from src.common import ROOT, load_jsonl, write_jsonl
+from src.llm_client import chamar_chat, configuracao_llm
 from src.query import ABSTENTION, CitationValidationError, Retriever, generate
 
 SAIDA_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
@@ -61,26 +59,7 @@ def carregar_perguntas(conjunto):
 
 def chamar_llm(sistema, usuario, tentativas=3):
     """Chama o endpoint compatível com Chat Completions configurado no .env."""
-    chave, modelo = os.getenv("LLM_API_KEY"), os.getenv("LLM_MODEL")
-    if not chave or not modelo:
-        raise RuntimeError("Defina LLM_API_KEY e LLM_MODEL no .env.")
-    base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-    payload = {"model": modelo, "temperature": 0, "messages": [
-        {"role": "system", "content": sistema},
-        {"role": "user", "content": usuario},
-    ]}
-    for tentativa in range(1, tentativas + 1):
-        try:
-            with httpx.Client(timeout=90) as client:
-                resposta = client.post(f"{base_url}/chat/completions",
-                                       headers={"Authorization": f"Bearer {chave}"}, json=payload)
-                resposta.raise_for_status()
-                return resposta.json()["choices"][0]["message"]["content"]
-        except httpx.HTTPStatusError as exc:
-            # 429 = limite de requisições: espera e tenta de novo. Outros erros sobem.
-            if exc.response.status_code != 429 or tentativa == tentativas:
-                raise
-            time.sleep(10 * tentativa)
+    return chamar_chat(sistema, usuario, tentativas=tentativas)
 
 
 def separar_cot(texto):
@@ -152,6 +131,7 @@ def main():
     parser.add_argument("--limite", type=int, help="Número máximo de perguntas (para testes)")
     parser.add_argument("--saida", default=str(SAIDA_PADRAO))
     args = parser.parse_args()
+    configuracao_llm()  # sem .env completo, para aqui em vez de errar pergunta por pergunta
 
     perguntas = carregar_perguntas(args.conjunto)[:args.limite]
     saida = Path(args.saida) if os.path.isabs(args.saida) else ROOT / args.saida
