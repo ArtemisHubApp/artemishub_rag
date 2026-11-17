@@ -78,7 +78,9 @@ def ler_veredito(texto):
 def julgar(resposta, pergunta, juiz=None):
     """Devolve a linha de nota de uma resposta (sem campos de data/modelo)."""
     linha = {"id": resposta["id"], "conjunto": resposta.get("conjunto"), "condicao": resposta["condicao"],
-             "respondivel": pergunta.get("expected_behavior") != "abstain"}
+             "respondivel": pergunta.get("expected_behavior") != "abstain",
+             # O validador barrou a resposta: o usuário não a veria, mas guardamos a nota do conteúdo.
+             "citacao_invalida": (resposta.get("erro") or "").startswith("citacao_invalida")}
     if resposta.get("erro") and resposta.get("resposta") is None:
         return {**linha, "nota": None, "veredito": "SEM_RESPOSTA", "justificativa": resposta["erro"][:200]}
     if not linha["respondivel"]:
@@ -94,7 +96,11 @@ def julgar(resposta, pergunta, juiz=None):
 
 
 def resumir(notas):
-    """Tabela por condição: acurácia nas respondíveis e abstenções."""
+    """Tabela por condição: acurácia nas respondíveis, abstenções e respostas barradas pelo validador.
+
+    `acuracia` mede o conteúdo da resposta bruta; `acuracia_com_validador` conta como erro
+    o que o validador de citações barrou, que é o que o usuário de fato receberia.
+    """
     grupos = defaultdict(list)
     for n in notas:
         if n["nota"] is not None:
@@ -109,8 +115,21 @@ def resumir(notas):
             "abstencao_indevida": round(sum(n["veredito"] == "ABSTENCAO_INDEVIDA" for n in resp) / len(resp), 3) if resp else None,
             "n_fora_do_escopo": len(fora),
             "abstencao_correta": round(sum(n["nota"] for n in fora) / len(fora), 3) if fora else None,
+            "citacao_invalida": round(sum(bool(n.get("citacao_invalida")) for n in linhas) / len(linhas), 3),
+            "acuracia_com_validador": round(sum(0.0 if n.get("citacao_invalida") else n["nota"] for n in resp)
+                                            / len(resp), 3) if resp else None,
         }
     return tabela
+
+
+def marcar_citacao_invalida(notas, respostas):
+    """Preenche `citacao_invalida` em notas antigas (de antes do campo existir) a partir das respostas,
+    sem chamar o juiz de novo. Notas que já têm o campo ficam como estão."""
+    erros = {(r["id"], r["condicao"]): r.get("erro") for r in respostas}
+    for n in notas:
+        if "citacao_invalida" not in n:
+            n["citacao_invalida"] = (erros.get((n["id"], n["condicao"])) or "").startswith("citacao_invalida")
+    return notas
 
 
 def ja_julgadas(saida):
@@ -160,7 +179,9 @@ def main():
             arquivo.flush()
             print(f"{nota['id']:>4} {nota['condicao']:<9} {nota['veredito']}")
     compactar(saida)
-    print(json.dumps(resumir(list(load_jsonl(saida))), ensure_ascii=False, indent=2))
+    notas = marcar_citacao_invalida(load_jsonl(saida), respostas)
+    write_jsonl(saida, notas)
+    print(json.dumps(resumir(notas), ensure_ascii=False, indent=2))
     print(f"Notas em {saida}")
 
 

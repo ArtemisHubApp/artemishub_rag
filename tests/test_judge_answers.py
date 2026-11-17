@@ -2,7 +2,8 @@ import json
 
 import pytest
 
-from scripts.judge_answers import JuizSemVeredito, compactar, julgar, ler_veredito, resumir
+from scripts.judge_answers import (JuizSemVeredito, compactar, julgar, ler_veredito,
+                                   marcar_citacao_invalida, resumir)
 
 RESPONDIVEL = {"id": "h01", "expected_answer": "Multa de até 3% da folha."}
 FORA = {"id": "h17", "expected_behavior": "abstain", "criterion": "A base não tem essa informação."}
@@ -56,7 +57,24 @@ def test_resumo_separa_respondiveis_e_fora_do_escopo():
         {"condicao": "rag", "respondivel": True, "nota": None, "veredito": "SEM_RESPOSTA"},
     ]
     assert resumir(notas)["rag"] == {"n_respondiveis": 2, "acuracia": 0.5, "abstencao_indevida": 0.5,
-                                     "n_fora_do_escopo": 1, "abstencao_correta": 1.0}
+                                     "n_fora_do_escopo": 1, "abstencao_correta": 1.0,
+                                     "citacao_invalida": 0.0, "acuracia_com_validador": 0.5}
+
+
+def test_julgar_marca_resposta_barrada_pelo_validador():
+    barrada = resposta(erro="citacao_invalida: [FONTE 9] não existe")
+    nota = julgar(barrada, RESPONDIVEL, juiz=lambda *_: '{"veredito": "CORRETA", "justificativa": "ok"}')
+    assert nota["citacao_invalida"] is True and nota["nota"] == 1.0
+    assert julgar(resposta(), RESPONDIVEL, juiz=lambda *_: '{"veredito": "CORRETA"}')["citacao_invalida"] is False
+
+
+def test_resumo_conta_citacao_invalida_como_erro_na_acuracia_com_validador():
+    notas = [
+        {"condicao": "rag", "respondivel": True, "nota": 1.0, "veredito": "CORRETA"},
+        {"condicao": "rag", "respondivel": True, "nota": 1.0, "veredito": "CORRETA", "citacao_invalida": True},
+    ]
+    tabela = resumir(notas)["rag"]
+    assert (tabela["acuracia"], tabela["acuracia_com_validador"], tabela["citacao_invalida"]) == (1.0, 0.5, 0.5)
 
 
 def test_compactar_mantem_a_nota_mais_recente(tmp_path):
@@ -67,3 +85,12 @@ def test_compactar_mantem_a_nota_mais_recente(tmp_path):
     compactar(saida)
     linhas = [json.loads(linha) for linha in saida.read_text(encoding="utf-8").splitlines()]
     assert [linha["veredito"] for linha in linhas] == ["CORRETA"]
+
+
+def test_marcar_citacao_invalida_preenche_notas_antigas_sem_sobrescrever():
+    respostas = [{"id": "h01", "condicao": "rag", "erro": "citacao_invalida: [FONTE 9]"},
+                 {"id": "h02", "condicao": "rag", "erro": None}]
+    notas = [{"id": "h01", "condicao": "rag"}, {"id": "h02", "condicao": "rag"},
+             {"id": "h03", "condicao": "rag", "citacao_invalida": True}]
+    marcadas = marcar_citacao_invalida(notas, respostas)
+    assert [n["citacao_invalida"] for n in marcadas] == [True, False, True]
