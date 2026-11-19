@@ -4,8 +4,8 @@ import json
 import time
 from statistics import mean
 
-from src.common import ROOT, load_jsonl, write_json
-from src.query import Retriever
+from artemis_rag.common import ROOT, load_jsonl, write_json
+from artemis_rag.query import Retriever
 
 
 def score_ranking(retrieved, relevant):

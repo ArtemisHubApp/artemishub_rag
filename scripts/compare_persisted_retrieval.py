@@ -2,11 +2,11 @@
 import argparse
 import json
 
-from src.common import ROOT, load_jsonl, write_json
-from src.evaluate import check_evidence, evaluate
-from src.index import build_index
-from src.prepare import prepare
-from src.query import Retriever
+from artemis_rag.common import ROOT, load_jsonl, write_json
+from artemis_rag.evaluate import check_evidence, evaluate
+from artemis_rag.index import build_index
+from artemis_rag.prepare import prepare
+from artemis_rag.query import Retriever
 
 
 def main():

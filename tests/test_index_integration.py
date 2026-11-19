@@ -4,10 +4,10 @@ import json
 import numpy as np
 import pytest
 
-from src.common import digest
-from src.index import active_collection, build_index
-from src.prepare import prepare
-from src.query import Retriever
+from artemis_rag.common import digest
+from artemis_rag.index import active_collection, build_index
+from artemis_rag.prepare import prepare
+from artemis_rag.query import Retriever
 
 
 class LocalEncoder:
@@ -84,7 +84,7 @@ def test_partial_run_preserves_complete_pointer(tmp_path, document):
 
 
 def test_failed_pointer_publication_preserves_complete_index(tmp_path, document, monkeypatch):
-    from src import index
+    from artemis_rag import index
 
     chunks = prepare([document])
     build_index(chunks, [document], path=tmp_path, model=LocalEncoder(), model_name="local-fixture")

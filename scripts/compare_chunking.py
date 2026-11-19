@@ -3,10 +3,10 @@ import json
 
 import numpy as np
 
-from src.common import ROOT, load_jsonl, write_json
-from src.evaluate import check_evidence, evaluate
-from src.index import active_collection, load_model
-from src.prepare import prepare
+from artemis_rag.common import ROOT, load_jsonl, write_json
+from artemis_rag.evaluate import check_evidence, evaluate
+from artemis_rag.index import active_collection, load_model
+from artemis_rag.prepare import prepare
 
 
 def main():

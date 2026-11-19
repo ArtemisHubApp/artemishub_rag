@@ -5,8 +5,8 @@ import unicodedata
 from collections import Counter
 from statistics import mean, median
 
-from src.common import PROCESSED, ROOT, load_jsonl, write_json
-from src.quality import DOCUMENT_FIELDS
+from artemis_rag.common import PROCESSED, ROOT, load_jsonl, write_json
+from artemis_rag.quality import DOCUMENT_FIELDS
 
 
 def distribution(values):

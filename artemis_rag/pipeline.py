@@ -6,11 +6,11 @@ import logging
 import time
 from pathlib import Path
 
-from src.common import PROCESSED, ROOT, digest, write_json, write_jsonl
-from src.eda import analyze
-from src.ingest import collect
-from src.prepare import prepare
-from src.quality import validate_chunks, validate_documents
+from artemis_rag.common import PROCESSED, ROOT, digest, write_json, write_jsonl
+from artemis_rag.eda import analyze
+from artemis_rag.ingest import collect
+from artemis_rag.prepare import prepare
+from artemis_rag.quality import validate_chunks, validate_documents
 
 LOG = logging.getLogger("rag_pipeline")
 
@@ -41,7 +41,7 @@ def run(sources_path=None, skip_index=False, allow_partial=False, chunk_size=600
         stats.update(validate_chunks(documents, chunks, max_chars=chunk_size))
         stats["chunk_dataset_sha256"] = digest(json.dumps(chunks, sort_keys=True, ensure_ascii=False))
         if not skip_index:
-            from src.index import build_index
+            from artemis_rag.index import build_index
             stats["index"] = build_index(chunks, documents, partial=partial)
             stats["index_published"] = True
         # Convenience exports; queries always use the atomically published index snapshot.

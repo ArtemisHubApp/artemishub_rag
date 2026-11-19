@@ -21,8 +21,8 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from src.common import ROOT, load_jsonl, write_jsonl
-from src.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "notas_acerto.jsonl"

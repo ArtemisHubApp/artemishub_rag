@@ -11,8 +11,8 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from src.common import ROOT
-from src.query import ABSTENTION, CitationValidationError, generate, validate_citations
+from artemis_rag.common import ROOT
+from artemis_rag.query import ABSTENTION, CitationValidationError, generate, validate_citations
 
 QUESTIONS = [
     "Onde faço uma denúncia de desigualdade salarial?",
@@ -104,7 +104,7 @@ def main():
     questions = QUESTIONS
     if args.questions:
         questions = [line.strip() for line in Path(args.questions).read_text(encoding="utf-8").splitlines() if line.strip()]
-    from src.query import Retriever
+    from artemis_rag.query import Retriever
     retriever = Retriever(strategy=args.retrieval)
     results = run(questions, retriever, top_k=args.top_k)
     base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1") if os.getenv("LLM_API_KEY") else ""

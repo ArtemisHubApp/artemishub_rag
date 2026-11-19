@@ -3,7 +3,7 @@
 Para cada pergunta, o mesmo modelo responde de três jeitos:
   - llm_puro: só a pergunta, sem documentos;
   - llm_cot:  a pergunta e a instrução de raciocinar passo a passo, sem documentos;
-  - rag:      a pergunta e os 5 trechos recuperados, com o `generate` do src/query.py.
+  - rag:      a pergunta e os 5 trechos recuperados, com o `generate` do artemis_rag/query.py.
 
 Cada resposta vira uma linha em reports/respostas_comparacao.jsonl. O arquivo é
 escrito linha a linha: se a execução parar no meio, rodar de novo pula o que já
@@ -19,9 +19,9 @@ import json
 import os
 from pathlib import Path
 
-from src.common import ROOT, load_jsonl, write_jsonl
-from src.llm_client import chamar_chat, configuracao_llm
-from src.query import ABSTENTION, CitationValidationError, Retriever, generate
+from artemis_rag.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.query import ABSTENTION, CitationValidationError, Retriever, generate
 
 SAIDA_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 CONDICOES = ("llm_puro", "llm_cot", "rag")

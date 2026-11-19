@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from src.common import (
+from artemis_rag.common import (
     PROCESSED,
     ROOT,
     digest,
@@ -53,7 +53,7 @@ def active_collection(path=None, allow_partial=False):
     if not pointer.exists():
         if (path / "partial.json").exists():
             raise ValueError("Index is partial; inspect reports or explicitly use --allow-partial")
-        raise ValueError("No published index. Run python -m src.pipeline first.")
+        raise ValueError("No published index. Run python -m artemis_rag.pipeline first.")
     active = json.loads(pointer.read_text(encoding="utf-8"))
     if active.get("partial") and not allow_partial:
         raise ValueError("Index is partial; inspect reports or explicitly use --allow-partial")
@@ -138,7 +138,7 @@ def build_index(chunks=None, documents=None, path=None, model=None, model_name=N
 
 if __name__ == "__main__":
     # Standalone indexing must verify completeness against the configured manifest.
-    from src.quality import validate_chunks, validate_documents
+    from artemis_rag.quality import validate_chunks, validate_documents
     documents = load_jsonl(PROCESSED / "documents.jsonl")
     chunks = load_jsonl(PROCESSED / "chunks.jsonl")
     validate_documents(documents)

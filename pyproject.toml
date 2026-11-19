@@ -2,7 +2,7 @@
 name = "artemishub-rag"
 version = "0.1.0"
 description = "RAG Pipeline for Career Orientation"
-requires-python = ">=3.11,<3.13"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "beautifulsoup4>=4.12,<5",
     "chromadb>=1.5,<2",
@@ -13,8 +13,15 @@ dependencies = [
     "truststore>=0.8,<1",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["artemis_rag"]
+
+[dependency-groups]
+dev = [
     "pytest>=8,<10",
     "ruff>=0.6,<1",
 ]
@@ -28,4 +35,4 @@ select = ["E", "F", "I", "UP"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["artemis_rag"]
