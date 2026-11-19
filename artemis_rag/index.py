@@ -66,7 +66,10 @@ def active_collection(path=None, allow_partial=False):
     if not pointer.exists():
         if (path / "partial.json").exists():
             raise IndiceIndisponivel("Index is partial; inspect reports or explicitly use --allow-partial")
-        raise IndiceIndisponivel("No published index. Run python -m artemis_rag.pipeline first.")
+        raise IndiceIndisponivel(
+            "No published index. Run python -m artemis_rag.pipeline from the RAG checkout. "
+            "Set ARTEMIS_RAG_INDEX_DIR to the published index directory."
+        )
     active = json.loads(pointer.read_text(encoding="utf-8"))
     if active.get("partial") and not allow_partial:
         raise IndiceIndisponivel("Index is partial; inspect reports or explicitly use --allow-partial")
