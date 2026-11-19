@@ -1,9 +1,9 @@
 import json
 from datetime import datetime
 
-from src.application.ports.repository import PipelineRepository
-from src.common import PROCESSED, ROOT
-from src.domain.entities import Chunk, Document, PipelineState
+from artemis_rag.application.ports.repository import PipelineRepository
+from artemis_rag.common import PROCESSED, ROOT
+from artemis_rag.domain.entities import Chunk, Document, PipelineState
 
 
 class FileRepository(PipelineRepository):

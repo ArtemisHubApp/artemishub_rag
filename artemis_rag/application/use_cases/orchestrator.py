@@ -1,9 +1,9 @@
 import logging
 from datetime import datetime
 
-from src.application.ports.repository import PipelineRepository
-from src.application.use_cases.pipeline_use_cases import IndexUseCase, IngestUseCase, PrepareUseCase
-from src.domain.entities import PipelineState
+from artemis_rag.application.ports.repository import PipelineRepository
+from artemis_rag.application.use_cases.pipeline_use_cases import IndexUseCase, IngestUseCase, PrepareUseCase
+from artemis_rag.domain.entities import PipelineState
 
 LOG = logging.getLogger("orchestrator")
 

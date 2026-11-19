@@ -1,11 +1,11 @@
 import logging
 
-from src.application.ports.repository import PipelineRepository
-from src.application.ports.vector_store import VectorStore
-from src.domain.entities import Chunk, Document
-from src.index import build_index
-from src.ingest import collect
-from src.prepare import prepare
+from artemis_rag.application.ports.repository import PipelineRepository
+from artemis_rag.application.ports.vector_store import VectorStore
+from artemis_rag.domain.entities import Chunk, Document
+from artemis_rag.index import build_index
+from artemis_rag.ingest import collect
+from artemis_rag.prepare import prepare
 
 LOG = logging.getLogger("pipeline_use_cases")
 

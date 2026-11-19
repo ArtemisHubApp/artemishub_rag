@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.domain.entities import Chunk
+from artemis_rag.domain.entities import Chunk
 
 
 class VectorStore(ABC):

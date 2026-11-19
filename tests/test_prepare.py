@@ -1,4 +1,4 @@
-from src.prepare import prepare, split_text
+from artemis_rag.prepare import prepare, split_text
 
 
 def test_chunks_overlap_and_cover_end():

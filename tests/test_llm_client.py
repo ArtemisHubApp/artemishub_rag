@@ -1,8 +1,8 @@
 import httpx
 import pytest
 
-from src import llm_client
-from src.llm_client import chamar_chat, configuracao_llm
+from artemis_rag import llm_client
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
 
 
 @pytest.fixture(autouse=True)

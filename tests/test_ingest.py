@@ -2,8 +2,8 @@ import httpx
 import pymupdf
 import pytest
 
-from src import ingest
-from src.common import looks_garbled
+from artemis_rag import ingest
+from artemis_rag.common import looks_garbled
 
 
 def test_article_extraction_excludes_neighbors_and_revoked_text():

@@ -2,10 +2,10 @@
 import json
 from collections import Counter
 
-from src.common import ROOT, load_jsonl, write_json
-from src.evaluate import check_evidence, evaluate
-from src.lexical import BM25
-from src.query import Retriever, diversify_pages
+from artemis_rag.common import ROOT, load_jsonl, write_json
+from artemis_rag.evaluate import check_evidence, evaluate
+from artemis_rag.lexical import BM25
+from artemis_rag.query import Retriever, diversify_pages
 
 
 def main():

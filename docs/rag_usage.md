@@ -9,17 +9,40 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
-python -m src.pipeline
-python -m src.eda
-python -m src.query "O que a cartilha informa sobre transparência salarial?"
-python -m src.evaluate
+python -m artemis_rag.pipeline
+python -m artemis_rag.eda
+python -m artemis_rag.query "O que a cartilha informa sobre transparência salarial?"
+python -m artemis_rag.evaluate
 ```
 
 A primeira execução baixa as fontes e o modelo. Após obter os pesos, `HF_HUB_OFFLINE=1` impede novas consultas ao Hub sem impedir os downloads das fontes. Configure o LLM opcional com `LLM_API_KEY`, `LLM_MODEL` e endpoint HTTPS compatível com Chat Completions. Sem credenciais, a consulta imprime evidências. A geração real ainda precisa de validação autorizada.
 
-A pipeline usa chunks de 600 caracteres e sobreposição de 100. Para reproduzir os parâmetros anteriores: `python -m src.pipeline --chunk-size 1200 --overlap 180`. Isso publica uma nova coleção após validação, preservando a anterior. Não apague índices para comparar configurações.
+A pipeline usa chunks de 600 caracteres e sobreposição de 100. Para reproduzir os parâmetros anteriores: `python -m artemis_rag.pipeline --chunk-size 1200 --overlap 180`. Isso publica uma nova coleção após validação, preservando a anterior. Não apague índices para comparar configurações.
 
-A busca padrão é `hybrid`: vetorial + BM25, fusão RRF e diversidade por página/seção. As opções `--retrieval dense` e `--retrieval pages` estão disponíveis em `src.query` e `src.evaluate`. A avaliação aceita `--output caminho.json` para preservar comparações. Métricas de página/seção não validam completude de um artigo ou qualidade de resposta.
+A busca padrão é `hybrid`: vetorial + BM25, fusão RRF e diversidade por página/seção. As opções `--retrieval dense` e `--retrieval pages` estão disponíveis em `artemis_rag.query` e `artemis_rag.evaluate`. A avaliação aceita `--output caminho.json` para preservar comparações. Métricas de página/seção não validam completude de um artigo ou qualidade de resposta.
+
+## Usar como biblioteca
+
+O `artemishub_agents` importa o RAG como pacote, sem passar pela CLI. Instale fixando um commit:
+
+```bash
+uv add "artemishub-rag @ git+https://github.com/ArtemisHubApp/artemishub_rag@<sha>"
+```
+
+A interface pública fica em `artemis_rag/api.py` e é reexportada em `artemis_rag`. Esses nomes são estáveis: mudar qualquer um deles quebra o agents.
+
+| Nome | O que faz |
+| --- | --- |
+| `Evidencia` | Dataclass imutável: `id`, `titulo`, `url`, `pagina`, `artigo`, `texto`, `distancia`, mais a procedência opcional (`publicador`, `versao`, `url_primaria`, `alternativa_usada`). `id` é `"FONTE 1"`, `"FONTE 2"`... na ordem do ranking; `pagina` e `artigo` são `None` quando não se aplicam. |
+| `buscar(pergunta, top_k=5, indice=None, parcial=False)` | Busca híbrida (a mesma da CLI), sem LLM. Devolve `list[Evidencia]`. |
+| `validar_citacoes(resposta, evidencias)` | Números de FONTE citados, ordenados; `[]` para a abstenção. Levanta `CitationValidationError` para fonte inexistente, rótulo malformado ou parágrafo sem citação. Confere a referência, não se o trecho sustenta a frase. |
+| `gerar(pergunta, evidencias)` | Resposta do LLM com citações já validadas. Devolve `ABSTENTION` sem evidências e `None` sem `LLM_API_KEY`/`LLM_MODEL`. Envia ao LLM o mesmo contexto que a CLI. |
+| `IndiceIndisponivel` | Subclasse de `ValueError`: não há índice publicado, ou só um parcial e `parcial=False`. |
+| `ABSTENTION`, `CitationValidationError` | Texto da abstenção e erro do validador. |
+
+**Onde fica o índice.** O pacote instalado não traz o índice nem os dados (`.chroma/` e `data/` estão no `.gitignore`). A ordem de busca é: o parâmetro `indice`, senão a variável `ARTEMIS_RAG_INDEX_DIR`, senão o `.chroma` deste repo (o padrão da CLI). A variável vale também para a escrita: `ARTEMIS_RAG_INDEX_DIR=/caminho python -m artemis_rag.pipeline` publica ali. A consulta só lê o índice, nunca `data/`.
+
+O modelo de embeddings da consulta precisa ser o do índice: não defina `EMBEDDING_MODEL` nem `EMBEDDING_REVISION` diferentes dos usados na publicação, senão `buscar` levanta `ValueError`. A primeira busca baixa o modelo do Hugging Face, se ele ainda não estiver no cache.
 
 ## Demonstração com LLM (Gemini)
 
@@ -46,11 +69,11 @@ Detalhes da comparação e da resposta barrada pelo validador em `docs/validatio
 Confira no AI Studio se o modelo continua disponível no plano gratuito. No plano gratuito, o Google pode usar prompts e respostas para melhorar seus produtos: envie só os trechos públicos da base, nunca dados de usuárias. Não versione o `.env` e apague a chave depois dos testes.
 
 ```bash
-uv run python -m src.pipeline   # se o índice ainda não existir
-uv run python -m src.demo       # gera reports/demo_rag.md
+uv run python -m artemis_rag.pipeline   # se o índice ainda não existir
+uv run python -m artemis_rag.demo       # gera reports/demo_rag.md
 ```
 
-`src.demo` roda 5 perguntas (a última fora da base, para observar a abstenção) e grava, para cada uma, os trechos recuperados com título, URL, página e distância, a resposta e as fontes citadas. Outras perguntas: `--questions arquivo.txt`, uma por linha. A saída nunca registra a chave. Uma pergunta com falha não interrompe as demais; o código de saída é 1 se alguma falhar.
+`artemis_rag.demo` roda 5 perguntas (a última fora da base, para observar a abstenção) e grava, para cada uma, os trechos recuperados com título, URL, página e distância, a resposta e as fontes citadas. Outras perguntas: `--questions arquivo.txt`, uma por linha. A saída nunca registra a chave. Uma pergunta com falha não interrompe as demais; o código de saída é 1 se alguma falhar.
 
 A validação de citações confere que cada parágrafo cita uma fonte recuperada, não que o trecho sustente a frase. Revise cada resposta contra os trechos antes de usá-la como evidência.
 
@@ -67,7 +90,7 @@ Os scripts em `scripts/` reproduzem os experimentos desta revisão usando snapsh
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
-ruff check src tests scripts
+ruff check artemis_rag tests scripts
 python -m pip check
 git diff --check
 ```

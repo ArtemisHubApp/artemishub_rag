@@ -6,9 +6,9 @@ import re
 
 import httpx
 
-from src.common import embedding_model, embedding_revision
-from src.index import active_collection, load_model
-from src.lexical import BM25, reciprocal_rank_fusion
+from artemis_rag.common import embedding_model, embedding_revision
+from artemis_rag.index import active_collection, load_model
+from artemis_rag.lexical import BM25, reciprocal_rank_fusion
 
 ABSTENTION = "Não encontrei evidência suficiente na base para responder."
 

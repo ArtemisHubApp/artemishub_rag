@@ -1,6 +1,6 @@
 import pytest
 
-from src.common import digest
+from artemis_rag.common import digest
 
 
 @pytest.fixture

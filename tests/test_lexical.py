@@ -1,4 +1,4 @@
-from src.lexical import BM25, reciprocal_rank_fusion, tokens
+from artemis_rag.lexical import BM25, reciprocal_rank_fusion, tokens
 
 
 def test_bm25_unicode_and_distinctive_term():

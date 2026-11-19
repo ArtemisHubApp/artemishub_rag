@@ -4,8 +4,9 @@ import json
 import time
 from statistics import mean
 
-from src.common import ROOT, load_jsonl, write_json
-from src.query import Retriever
+from artemis_rag.common import ROOT, load_jsonl, write_json
+from artemis_rag.index import index_dir
+from artemis_rag.query import Retriever
 
 
 def score_ranking(retrieved, relevant):
@@ -160,7 +161,7 @@ def main():
     args = parser.parse_args()
     cases = filter_by_evaluation_group(load_jsonl(args.questions), args.evaluation_groups)
     retriever = Retriever(allow_partial=args.allow_partial, strategy=args.retrieval)
-    snapshot = ROOT / ".chroma" / retriever.active["snapshot"]
+    snapshot = index_dir() / retriever.active["snapshot"]
     cases = check_evidence(cases, load_jsonl(snapshot / "documents.jsonl"), gold=args.gold)
     report = evaluate(cases, retriever, gold=args.gold)
     report["gold"] = args.gold

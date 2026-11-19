@@ -2,10 +2,10 @@ import copy
 
 import pytest
 
-from src.common import digest
-from src.eda import analyze
-from src.prepare import prepare
-from src.quality import validate_chunks, validate_documents
+from artemis_rag.common import digest
+from artemis_rag.eda import analyze
+from artemis_rag.prepare import prepare
+from artemis_rag.quality import validate_chunks, validate_documents
 
 
 def test_garbled_text_is_rejected(document):
@@ -56,7 +56,7 @@ def test_chunk_integrity_and_eda(document):
 
 
 def test_non_destructive_quality_signals(document):
-    from src.eda import quality_signals
+    from artemis_rag.eda import quality_signals
 
     original = ('Linha longa repetida que exige avaliação editorial.\n' * 2) + 'Ligatura ﬁ e controle \b'
     document['content'] = original

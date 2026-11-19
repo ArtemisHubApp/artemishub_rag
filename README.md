@@ -45,7 +45,7 @@ O MVP atual:
 - **Indexa** os trechos no ChromaDB com o modelo `paraphrase-multilingual-MiniLM-L12-v2`, sem apagar índices anteriores.
 - **Busca híbrida:** combina busca vetorial e BM25 com fusão RRF.
 - **Responde com citações**, usando um LLM compatível com a API de Chat Completions (opcional). Sem LLM configurado, mostra só os trechos encontrados.
-- **Gera a demonstração** (`python -m src.demo`): perguntas, trechos recuperados, resposta e fontes citadas em `reports/demo_rag.md`.
+- **Gera a demonstração** (`python -m artemis_rag.demo`): perguntas, trechos recuperados, resposta e fontes citadas em `reports/demo_rag.md`.
 - **Avalia a recuperação** com métricas de recall, hit rate e MRR em dois conjuntos de perguntas.
 
 ## ⚙️ Como funciona
@@ -65,7 +65,8 @@ Detalhes em [`docs/architecture.md`](docs/architecture.md).
 ```
 .
 ├── config/sources.json        # fontes oficiais e alternativas
-├── src/
+├── artemis_rag/               # pacote Python (instalável)
+│   ├── api.py                 # interface pública: buscar, gerar, validar_citacoes
 │   ├── pipeline.py            # executa coleta → preparo → índice
 │   ├── ingest.py              # download e extração das fontes
 │   ├── quality.py             # validação de documentos e chunks
@@ -83,13 +84,13 @@ Detalhes em [`docs/architecture.md`](docs/architecture.md).
 ├── tests/                     # testes automatizados (pytest)
 ├── docs/                      # arquitetura, uso, relatório de validação, specs
 ├── agent/                     # skills de desenvolvimento orientado a spec (SDD)
-├── .github/workflows/ci.yml   # CI: Ruff + pytest em Python 3.11 e 3.12
+├── .github/workflows/ci.yml   # CI: Ruff + pytest em Python 3.11, 3.12 e 3.13
 └── Dockerfile
 ```
 
 ## 🚀 Como executar
 
-**Pré-requisitos:** Python 3.11 ou superior e [uv](https://docs.astral.sh/uv/).
+**Pré-requisitos:** Python 3.11 a 3.13 e [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/ArtemisHubApp/artemishub_rag.git
@@ -101,14 +102,31 @@ cp .env.example .env
 O `.env` só precisa ser preenchido para usar o LLM (`LLM_API_KEY`, `LLM_MODEL` e, se necessário, `LLM_BASE_URL`).
 
 ```bash
-uv run python -m src.pipeline      # coleta, prepara e indexa as fontes
-uv run python -m src.eda           # gera o perfil do dataset em reports/eda.json
-uv run python -m src.query "O que a cartilha informa sobre transparência salarial?"
-uv run python -m src.evaluate      # métricas de recuperação
-uv run python -m src.demo          # demonstração com LLM em reports/demo_rag.md
+uv run python -m artemis_rag.pipeline      # coleta, prepara e indexa as fontes
+uv run python -m artemis_rag.eda           # gera o perfil do dataset em reports/eda.json
+uv run python -m artemis_rag.query "O que a cartilha informa sobre transparência salarial?"
+uv run python -m artemis_rag.evaluate      # métricas de recuperação
+uv run python -m artemis_rag.demo          # demonstração com LLM em reports/demo_rag.md
 ```
 
 A primeira execução baixa as fontes e o modelo de embeddings. Outras opções (`--skip-index`, `--allow-partial`, `--retrieval`, `--chunk-size`) estão em [`docs/rag_usage.md`](docs/rag_usage.md).
+
+## 📦 Usar como biblioteca (artemishub_agents)
+
+O pacote `artemis_rag` pode ser instalado como dependência git, fixada num commit:
+
+```bash
+uv add "artemishub-rag @ git+https://github.com/ArtemisHubApp/artemishub_rag@<sha>"
+```
+
+```python
+from artemis_rag import buscar, gerar, validar_citacoes, Evidencia, IndiceIndisponivel
+
+evidencias = buscar("O que diz a Lei 14.611?", top_k=5)  # list[Evidencia], ids "FONTE 1", "FONTE 2"...
+resposta = gerar("O que diz a Lei 14.611?", evidencias)  # None se o LLM não estiver configurado
+```
+
+O pacote leva só o código: o índice (`.chroma/`) não vai junto. Gere-o com `python -m artemis_rag.pipeline` neste repo e aponte para ele com `ARTEMIS_RAG_INDEX_DIR=/caminho/.chroma` (ou passe `indice=Path(...)` para `buscar`). Sem índice publicado, `buscar` levanta `IndiceIndisponivel`. Contrato completo em [`docs/rag_usage.md`](docs/rag_usage.md#usar-como-biblioteca).
 
 ## 🧪 Testes e qualidade
 

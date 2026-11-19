@@ -3,8 +3,8 @@ import json
 import httpx
 import pytest
 
-from src import query
-from src.query import ABSTENTION, generate, normalize_citations, validate_citations
+from artemis_rag import query
+from artemis_rag.query import ABSTENTION, generate, normalize_citations, validate_citations
 
 
 @pytest.fixture
@@ -83,7 +83,7 @@ def test_generation_without_credentials(monkeypatch, hits):
 
 
 def test_page_diversity_preserves_ranking_and_fills_small_corpus():
-    from src.query import diversify_pages
+    from artemis_rag.query import diversify_pages
 
     hits = [{'chunk_id': str(i), 'metadata': {'document_id': doc, 'page': page}}
             for i, (doc, page) in enumerate([('a', '1'), ('a', '1'), ('a', '2'), ('b', '1'), ('a', '2')])]
