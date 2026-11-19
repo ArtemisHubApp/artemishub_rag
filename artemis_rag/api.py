@@ -37,19 +37,20 @@ def buscar(pergunta: str, top_k: int = 5, indice: Path | None = None, parcial: b
 def validar_citacoes(resposta: str, evidencias: list[Evidencia]) -> list[int]:
     """Números de FONTE citados (ordenados, sem repetição); `[]` para a abstenção.
 
-    Confere só a validade referencial. Levanta `CitationValidationError` se a resposta citar fonte
+    Confere só a validade referencial pelos IDs das evidências. Levanta `CitationValidationError` se a resposta citar fonte
     inexistente, tiver rótulo malformado ou parágrafo sem citação.
     """
-    return validate_citations(resposta, evidencias)
+    return validate_citations(resposta, evidencias, source_ids=[evidencia.id for evidencia in evidencias])
 
 
 def gerar(pergunta: str, evidencias: list[Evidencia]) -> str | None:
     """Resposta do LLM com citações já validadas; `ABSTENTION` sem evidências; `None` sem LLM configurado.
 
-    Usa LLM_API_KEY, LLM_MODEL e LLM_BASE_URL do ambiente. Pode levantar `CitationValidationError`
+    Preserva os IDs das evidências enviadas ao LLM. Usa LLM_API_KEY, LLM_MODEL e LLM_BASE_URL do ambiente. Pode levantar `CitationValidationError`
     e erros de `httpx`.
     """
-    return generate(pergunta, [_hit(evidencia) for evidencia in evidencias])
+    hits = [_hit(evidencia) for evidencia in evidencias]
+    return generate(pergunta, hits, source_ids=[evidencia.id for evidencia in evidencias])
 
 
 def _evidencia(posicao: int, hit: dict) -> Evidencia:

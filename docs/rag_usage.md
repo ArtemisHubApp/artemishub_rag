@@ -40,6 +40,8 @@ A interface pública fica em `artemis_rag/api.py` e é reexportada em `artemis_r
 | `IndiceIndisponivel` | Subclasse de `ValueError`: não há índice publicado, ou só um parcial e `parcial=False`. |
 | `ABSTENTION`, `CitationValidationError` | Texto da abstenção e erro do validador. |
 
+Ao filtrar ou reordenar o retorno de `buscar`, mantenha `Evidencia.id`. `gerar` envia esses IDs ao LLM e `validar_citacoes` aceita apenas referências aos IDs da lista recebida. Um rótulo incompleto é rejeitado mesmo quando o parágrafo contém uma citação válida.
+
 **Onde fica o índice.** O pacote instalado não traz o índice nem os dados (`.chroma/` e `data/` estão no `.gitignore`). A ordem de busca é: o parâmetro `indice`, senão a variável `ARTEMIS_RAG_INDEX_DIR`, senão o `.chroma` deste repo (o padrão da CLI). A variável vale também para a escrita: `ARTEMIS_RAG_INDEX_DIR=/caminho python -m artemis_rag.pipeline` publica ali. A consulta só lê o índice, nunca `data/`.
 
 O modelo de embeddings da consulta precisa ser o do índice: não defina `EMBEDDING_MODEL` nem `EMBEDDING_REVISION` diferentes dos usados na publicação, senão `buscar` levanta `ValueError`. A primeira busca baixa o modelo do Hugging Face, se ele ainda não estiver no cache.
