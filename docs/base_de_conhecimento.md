@@ -9,7 +9,7 @@ Todas as candidatas vieram dos documentos de pesquisa do grupo (First Day, Pesqu
 Uma fonte entra na base quando atende a todos os critérios abaixo:
 
 1. **Origem identificável:** órgão público, organismo internacional ou instituição de pesquisa reconhecida. Relatórios de uma empresa só (por exemplo, o relatório de transparência de um empregador específico) não entram.
-2. **Texto extraível:** PDF com camada de texto ou página HTML. O `src/ingest.py` recusa páginas vazias, que exigiriam OCR — salvo exceção auditada via `known_blank_pages` (ver abaixo).
+2. **Texto extraível:** PDF com camada de texto ou página HTML. O `artemis_rag/ingest.py` recusa páginas vazias, que exigiriam OCR — salvo exceção auditada via `known_blank_pages` (ver abaixo).
 3. **Responde perguntas das personas:** direitos e igualdade salarial, negociação, desigualdade de gênero no trabalho ou oportunidades para mulheres em STEM.
 4. **Documento, não base de dados:** microdados e tabelas (RAIS, CAGED, PNAD) servem ao modelo de estimativa salarial, não à busca por texto.
 
@@ -40,7 +40,7 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 
 ### Correções aplicadas ao ativar candidatas
 
-- **TLS do INEP:** `download.inep.gov.br` falhava com `SSL: CERTIFICATE_VERIFY_FAILED` no bundle certifi padrão; `src/ingest.py` agora injeta o trust store do sistema (`truststore.inject_into_ssl()`) para validar o certificado corretamente — não é bypass de verificação, é usar outra fonte de CAs confiáveis.
+- **TLS do INEP:** `download.inep.gov.br` falhava com `SSL: CERTIFICATE_VERIFY_FAILED` no bundle certifi padrão; `artemis_rag/ingest.py` agora injeta o trust store do sistema (`truststore.inject_into_ssl()`) para validar o certificado corretamente — não é bypass de verificação, é usar outra fonte de CAs confiáveis.
 - **`known_blank_pages` (novo mecanismo):** o PDF do INEP tem a página 108 (última) genuinamente vazia (0 caracteres, 0 imagens, confirmado manualmente). Um campo opcional por fonte permite declarar páginas sabidamente vazias; elas só são descartadas (não indexadas) se estiverem de fato vazias — se a página declarada tiver texto, ou outra página vier vazia sem estar declarada, a fonte continua falhando. Ver `tests/test_ingest.py`.
 - **URL do `cartilha_plano_nacional` → `/@@display-file/file`:** mesmo padrão das outras publicações do gov.br; mas a fonte ficou desabilitada por outro motivo (ver abaixo).
 - **`portaria_mte_3714_2023`:** URL principal trocada para o PDF oficial do DOU em gov.br/mulheres; o link do Datalegis/ANTT passou a alternativa.
@@ -82,9 +82,9 @@ Uma fonte entra na base quando atende a todos os critérios abaixo:
 ## Como ativar uma nova candidata
 
 1. Em `config/sources.json`, adicione a entrada com `"enabled": true` e confira se `expected_text` aparece no documento.
-2. Rode `uv run python -m src.pipeline --skip-index`. Isso coleta e valida tudo sem gerar embeddings. Se uma fonte falhar (marcador ausente, página sem texto, link quebrado), a pipeline aponta qual foi em `reports/latest_run.json`.
+2. Rode `uv run python -m artemis_rag.pipeline --skip-index`. Isso coleta e valida tudo sem gerar embeddings. Se uma fonte falhar (marcador ausente, página sem texto, link quebrado), a pipeline aponta qual foi em `reports/latest_run.json`.
 3. Se a única falha for uma página sabidamente vazia (confirme com PyMuPDF: 0 caracteres e 0 imagens), declare-a em `known_blank_pages` em vez de descartar a fonte.
-4. Rode `uv run python -m src.pipeline` para publicar o novo índice. O índice anterior continua preservado.
-5. Acrescente perguntas sobre as fontes novas em `evaluation/questions.jsonl` (desenvolvimento) e rode `uv run python -m src.evaluate`. O holdout só deve ser usado para medir a versão final.
+4. Rode `uv run python -m artemis_rag.pipeline` para publicar o novo índice. O índice anterior continua preservado.
+5. Acrescente perguntas sobre as fontes novas em `evaluation/questions.jsonl` (desenvolvimento) e rode `uv run python -m artemis_rag.evaluate`. O holdout só deve ser usado para medir a versão final.
 6. Confira em `reports/eda.json` se o documento novo passa a dominar o índice — hoje o INEP ocupa 36,7% dos 1209 chunks. O tratamento de tabelas para reequilibrar isso é tratado em uma branch separada (`feat/chunking-tabelas`), não nesta entrega.
-7. Confira também a Context Precision@5 (`src/evaluate.py`, campo `context_precision_metrics`): mede quantos dos 5 trechos recuperados são de documentos realmente relevantes, não só o volume do índice. Na expansão para 20 fontes, quem mais "invade" o top 5 de perguntas que não são sobre ele é `guia_negociacao_coletiva` (vocabulário muito próximo do tema central), não o INEP — vale conferir de novo depois de ativar qualquer fonte nova.
+7. Confira também a Context Precision@5 (`artemis_rag/evaluate.py`, campo `context_precision_metrics`): mede quantos dos 5 trechos recuperados são de documentos realmente relevantes, não só o volume do índice. Na expansão para 20 fontes, quem mais "invade" o top 5 de perguntas que não são sobre ele é `guia_negociacao_coletiva` (vocabulário muito próximo do tema central), não o INEP — vale conferir de novo depois de ativar qualquer fonte nova.
