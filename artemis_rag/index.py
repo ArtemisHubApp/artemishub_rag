@@ -18,6 +18,19 @@ from artemis_rag.common import (
 )
 
 COLLECTION = "stem_career_docs"
+INDEX_DIR_ENV = "ARTEMIS_RAG_INDEX_DIR"
+
+
+class IndiceIndisponivel(ValueError):
+    """No consultable index: nothing published, or only a partial one without explicit opt-in."""
+
+
+def index_dir(path: str | os.PathLike | None = None) -> Path:
+    """Explicit path, else $ARTEMIS_RAG_INDEX_DIR, else the repo's .chroma (CLI default)."""
+    if path:
+        return Path(path)
+    configured = os.getenv(INDEX_DIR_ENV)
+    return Path(configured) if configured else ROOT / ".chroma"
 
 
 @lru_cache(maxsize=2)
@@ -48,15 +61,15 @@ def writer_lock(path):
 
 
 def active_collection(path=None, allow_partial=False):
-    path = Path(path or ROOT / ".chroma")
+    path = index_dir(path)
     pointer = path / ("partial.json" if allow_partial and (path / "partial.json").exists() else "active.json")
     if not pointer.exists():
         if (path / "partial.json").exists():
-            raise ValueError("Index is partial; inspect reports or explicitly use --allow-partial")
-        raise ValueError("No published index. Run python -m artemis_rag.pipeline first.")
+            raise IndiceIndisponivel("Index is partial; inspect reports or explicitly use --allow-partial")
+        raise IndiceIndisponivel("No published index. Run python -m artemis_rag.pipeline first.")
     active = json.loads(pointer.read_text(encoding="utf-8"))
     if active.get("partial") and not allow_partial:
-        raise ValueError("Index is partial; inspect reports or explicitly use --allow-partial")
+        raise IndiceIndisponivel("Index is partial; inspect reports or explicitly use --allow-partial")
     return chroma_client(path).get_collection(active["collection"], embedding_function=None), active
 
 
@@ -73,7 +86,7 @@ def build_index(chunks=None, documents=None, path=None, model=None, model_name=N
     ids = [c["chunk_id"] for c in chunks]
     if len(set(ids)) != len(ids):
         raise ValueError("Duplicate chunk_id")
-    path = Path(path or ROOT / ".chroma")
+    path = index_dir(path)
     model_name = model_name or embedding_model()
     revision = embedding_revision(model_name)
     with writer_lock(path / "writer.lock"):
