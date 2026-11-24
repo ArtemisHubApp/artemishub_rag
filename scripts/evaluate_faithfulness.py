@@ -22,9 +22,11 @@ from pathlib import Path
 
 from artemis_rag.common import ROOT, load_jsonl, write_jsonl
 from artemis_rag.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.prompts import obter_prompt
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "fidelidade_rag.jsonl"
+PROMPT_FIDELIDADE = "artemis-rag/fidelidade"
 FALHAS_TEMPORARIAS = (
     "HTTPStatusError",
     "ConnectError",
@@ -32,29 +34,6 @@ FALHAS_TEMPORARIAS = (
     "RemoteProtocolError",
     "AvaliadorSemVeredito",
     "JSONDecodeError",
-)
-
-SISTEMA_FIDELIDADE = (
-    "Você é um avaliador rigoroso de fidelidade (faithfulness / groundedness) em sistemas RAG.\n"
-    "Sua tarefa é verificar se as afirmações contidas na RESPOSTA DO SISTEMA são estritamente "
-    "fundamentadas pelos TRECHOS DE CONTEXTO recuperados.\n\n"
-    "Regras de avaliação:\n"
-    "1. Extraia as afirmações factuais atômicas contidas na resposta. Ignore cumprimentos, avisos legais "
-    "de caráter informativo geral (disclaimers) e marcações de citação como [FONTE N].\n"
-    "2. Para cada afirmação, verifique se ela pode ser deduzida DIRETAMENTE dos trechos de contexto fornecidos:\n"
-    "   - Se o contexto apoiar diretamente a afirmação: suportada = true\n"
-    "   - Se o contexto NÃO mencionar a informação, for ambíguo ou contradizer a afirmação: suportada = false "
-    "(mesmo que seja verdadeira no mundo real, só vale o que está no contexto).\n"
-    "3. Calcule o score de fidelidade: (número de afirmações suportadas) / (total de afirmações). "
-    "Se não houver afirmações factuais na resposta, o score é 1.0.\n\n"
-    "Responda estritamente com um objeto JSON no seguinte formato, sem texto fora dele:\n"
-    "{\n"
-    '  "afirmacoes": [\n'
-    '    {"afirmacao": "texto da afirmação atômica", "suportada": true, "justificativa": "citação curta"}\n'
-    "  ],\n"
-    '  "score": 1.0,\n'
-    '  "resumo": "frase curta resumindo o resultado"\n'
-    "}"
 )
 
 
@@ -143,8 +122,9 @@ def avaliar_fidelidade(linha_rag, avaliador=None):
         f"TRECHOS DE CONTEXTO RECUPERADOS:\n{contexto}"
     )
 
+    sistema = obter_prompt(PROMPT_FIDELIDADE) if avaliador is None else ""
     funcao_chamada = avaliador or chamar_avaliador
-    texto_saida = funcao_chamada(SISTEMA_FIDELIDADE, usuario)
+    texto_saida = funcao_chamada(sistema, usuario)
     afirmacoes, score, resumo = ler_veredito_fidelidade(texto_saida)
 
     total = len(afirmacoes)
