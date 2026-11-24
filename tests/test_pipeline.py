@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from src import pipeline
-from src.common import load_jsonl
+from artemis_rag import pipeline
+from artemis_rag.common import load_jsonl
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def local_pipeline(tmp_path, monkeypatch):
                 def json(self): return {}
             return content.encode("utf-8"), Response(status, content), []
         
-        monkeypatch.setattr("src.ingest.fetch", mock_fetch)
+        monkeypatch.setattr("artemis_rag.ingest.fetch", mock_fetch)
         
     return tmp_path, manifest, respond
 
@@ -35,8 +35,8 @@ def test_pipeline_basic_flow(local_pipeline, monkeypatch):
     root, manifest, respond = local_pipeline
     respond(200, "<nav>IGNORE</nav><main>" + "Orientação de carreira. " * 100 + "</main>")
     
-    import src.index
-    monkeypatch.setattr(src.index, "build_index", lambda *args, **kwargs: {"indexed": 1})
+    import artemis_rag.index
+    monkeypatch.setattr(artemis_rag.index, "build_index", lambda *args, **kwargs: {"indexed": 1})
     
     stats = pipeline.run(manifest, skip_index=True)
     assert stats["status"] == "success"
@@ -76,13 +76,13 @@ def test_full_pipeline_with_real_chroma(local_pipeline, monkeypatch):
 
     import numpy as np
 
-    import src.index
+    import artemis_rag.index
     class Encoder:
         def encode(self, texts, normalize_embeddings=True):
             return np.tile(np.array([1.0, 0.0, 0.0], dtype=np.float32), (len(texts), 1))
     
-    monkeypatch.setattr(src.index, "ROOT", root)
-    monkeypatch.setattr(src.index, "load_model", lambda *args: Encoder())
+    monkeypatch.setattr(artemis_rag.index, "ROOT", root)
+    monkeypatch.setattr(artemis_rag.index, "load_model", lambda *args: Encoder())
     
     result = pipeline.run(manifest)
     assert result["status"] == "success"

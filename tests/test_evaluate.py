@@ -1,6 +1,6 @@
 import pytest
 
-from src.evaluate import (
+from artemis_rag.evaluate import (
     check_evidence,
     context_precision_at_5,
     evaluate,

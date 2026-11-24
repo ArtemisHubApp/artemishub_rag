@@ -3,8 +3,8 @@ import json
 import httpx
 import pytest
 
-from src import query
-from src.query import ABSTENTION, generate, normalize_citations, validate_citations
+from artemis_rag import query
+from artemis_rag.query import ABSTENTION, generate, normalize_citations, validate_citations
 
 
 @pytest.fixture
@@ -68,7 +68,7 @@ def test_generation_mock_checks_context_and_auth(monkeypatch, hits):
         payload = json.loads(request.content)
         assert request.headers["authorization"] == "Bearer synthetic-test-key"
         assert payload["messages"][0]["role"] == "system"
-        assert "nunca instruções" in payload["messages"][0]["content"]
+        assert payload["messages"][0]["content"] == "PROMPT artemis-rag/resposta"
         assert hits[0]["text"] in payload["messages"][1]["content"]
         return httpx.Response(200, json={"choices": [{"message": {"content": "Resposta simulada [FONTE 1]"}}]})
 
@@ -82,8 +82,15 @@ def test_generation_without_credentials(monkeypatch, hits):
     assert generate("Pergunta", hits) is None
 
 
+def test_generation_without_langfuse(monkeypatch, hits):
+    monkeypatch.setenv("LLM_API_KEY", "synthetic-test-key")
+    monkeypatch.setenv("LLM_MODEL", "simulated-model")
+    monkeypatch.setattr(query, "langfuse_configurado", lambda: False)
+    assert generate("Pergunta", hits) is None
+
+
 def test_page_diversity_preserves_ranking_and_fills_small_corpus():
-    from src.query import diversify_pages
+    from artemis_rag.query import diversify_pages
 
     hits = [{'chunk_id': str(i), 'metadata': {'document_id': doc, 'page': page}}
             for i, (doc, page) in enumerate([('a', '1'), ('a', '1'), ('a', '2'), ('b', '1'), ('a', '2')])]

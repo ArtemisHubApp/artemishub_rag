@@ -3,7 +3,7 @@
 Para cada pergunta, o mesmo modelo responde de três jeitos:
   - llm_puro: só a pergunta, sem documentos;
   - llm_cot:  a pergunta e a instrução de raciocinar passo a passo, sem documentos;
-  - rag:      a pergunta e os 5 trechos recuperados, com o `generate` do src/query.py.
+  - rag:      a pergunta e os 5 trechos recuperados, com o `generate` do artemis_rag/query.py.
 
 Cada resposta vira uma linha em reports/respostas_comparacao.jsonl. O arquivo é
 escrito linha a linha: se a execução parar no meio, rodar de novo pula o que já
@@ -19,28 +19,17 @@ import json
 import os
 from pathlib import Path
 
-from src.common import ROOT, load_jsonl, write_jsonl
-from src.llm_client import chamar_chat, configuracao_llm
-from src.query import ABSTENTION, CitationValidationError, Retriever, generate
+from artemis_rag.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.prompts import PromptIndisponivel, obter_prompt
+from artemis_rag.query import ABSTENTION, CitationValidationError, Retriever, generate
 
 SAIDA_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 CONDICOES = ("llm_puro", "llm_cot", "rag")
 
-# O mesmo início de prompt nas duas condições sem documentos, para que a única
-# diferença entre elas seja o pedido de raciocínio. A frase de abstenção é a
-# mesma do RAG, para que "não sei" seja contado do mesmo jeito nas três.
-SISTEMA_BASE = (
-    "Você orienta sobre informações gerais de carreira e igualdade salarial no Brasil. "
-    "Responda em português brasileiro, de forma direta, usando o seu conhecimento geral. "
-    "Você não recebe documentos: responda com o que sabe. "
-    "Não invente números, leis, artigos ou referências. "
-    f"Só se realmente não souber, responda exatamente: {ABSTENTION} "
-    "(essa frase é apenas o código padrão para 'não sei')."
-)
-SISTEMA_COT = SISTEMA_BASE + (
-    " Antes de responder, raciocine passo a passo. "
-    "Depois, escreva uma linha começando com 'RESPOSTA FINAL:' seguida só da resposta."
-)
+# Os dois prompts sem documentos moram no Langfuse e têm o mesmo início, para que a única diferença entre
+# eles seja o pedido de raciocínio. Ao mudar um, mude o outro. A frase de abstenção é a mesma do RAG.
+PROMPTS = {"llm_puro": "artemis-rag/comparacao-sem-documentos", "llm_cot": "artemis-rag/comparacao-passo-a-passo"}
 MARCADOR_COT = "RESPOSTA FINAL:"
 
 
@@ -87,17 +76,21 @@ def responder(pergunta, condicao, retriever, llm=chamar_llm, gerar_rag=generate)
              "pergunta": pergunta["question"], "resposta": None, "raciocinio": None,
              "absteve": False, "trechos": [], "erro": None,
              "modelo": os.getenv("LLM_MODEL"), "data": dt.date.today().isoformat()}
+    # Fora do try: sem prompt, o script para em vez de gravar erro em cada pergunta.
+    sistema = obter_prompt(PROMPTS[condicao], abstencao=ABSTENTION) if condicao in PROMPTS else None
     try:
         if condicao == "llm_puro":
-            linha["resposta"] = llm(SISTEMA_BASE, pergunta["question"]).strip()
+            linha["resposta"] = llm(sistema, pergunta["question"]).strip()
         elif condicao == "llm_cot":
-            linha["raciocinio"], linha["resposta"] = separar_cot(llm(SISTEMA_COT, pergunta["question"]))
+            linha["raciocinio"], linha["resposta"] = separar_cot(llm(sistema, pergunta["question"]))
         elif condicao == "rag":
             hits = retriever.retrieve(pergunta["question"], 5)
             linha["trechos"] = trechos_para_salvar(hits)
             linha["resposta"] = gerar_rag(pergunta["question"], hits)
         else:
             raise ValueError(f"Condição desconhecida: {condicao}")
+    except PromptIndisponivel:
+        raise
     except CitationValidationError as exc:
         # O validador barrou a resposta do RAG: guardamos o texto bruto para
         # ainda dar para corrigir e medir a fidelidade, e registramos o motivo.

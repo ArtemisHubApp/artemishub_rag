@@ -16,7 +16,7 @@ import pymupdf
 import truststore
 from bs4 import BeautifulSoup
 
-from src.common import PROCESSED, RAW, ROOT, digest, looks_garbled, write_jsonl
+from artemis_rag.common import PROCESSED, RAW, ROOT, digest, looks_garbled, write_jsonl
 
 # Some government hosts (e.g. download.inep.gov.br) serve a certificate chain
 # that the bundled certifi CAs can't complete, but that the OS trust store can.

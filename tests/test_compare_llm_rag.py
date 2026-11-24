@@ -1,7 +1,7 @@
 import json
 
+from artemis_rag.query import CitationValidationError
 from scripts.compare_llm_rag import ABSTENTION, absteve, compactar, responder, separar_cot
-from src.query import CitationValidationError
 
 PERGUNTA = {"id": "h04", "conjunto": "holdout", "question": "Qual a multa para a empresa?"}
 HIT = {"chunk_id": "c1", "text": "multa de 10 vezes o novo salário",

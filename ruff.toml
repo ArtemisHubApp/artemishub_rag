@@ -6,4 +6,4 @@ select = ["E", "F", "I", "UP"]
 ignore = ["E501"]
 
 [lint.isort]
-known-first-party = ["src"]
+known-first-party = ["artemis_rag"]

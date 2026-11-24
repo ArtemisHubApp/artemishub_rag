@@ -21,8 +21,9 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from src.common import ROOT, load_jsonl, write_jsonl
-from src.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
+from artemis_rag.prompts import PromptIndisponivel, obter_prompt
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "notas_acerto.jsonl"
@@ -30,16 +31,7 @@ ARQUIVOS_PERGUNTAS = (ROOT / "evaluation" / "questions.jsonl", ROOT / "evaluatio
 NOTAS = {"CORRETA": 1.0, "PARCIAL": 0.5, "INCORRETA": 0.0}
 FALHAS_TEMPORARIAS = ("HTTPStatusError", "ConnectError", "ReadTimeout", "RemoteProtocolError", "JuizSemVeredito")
 
-SISTEMA_JUIZ = (
-    "Você é um avaliador rigoroso. Compare a RESPOSTA de um sistema com o GABARITO de uma pergunta sobre "
-    "igualdade salarial e carreira no Brasil. Ignore marcações de citação como [FONTE 1] e diferenças de "
-    "estilo ou tamanho; julgue só o conteúdo.\n"
-    "- CORRETA: traz o essencial do gabarito e não afirma nada que o contradiga.\n"
-    "- PARCIAL: acerta parte do essencial, mas falta algo importante, ou acerta com um erro menor.\n"
-    "- INCORRETA: erra o essencial, contradiz o gabarito ou inventa números, leis ou prazos.\n"
-    'Responda só com JSON, sem texto fora dele: {"veredito": "CORRETA|PARCIAL|INCORRETA", '
-    '"justificativa": "uma frase curta"}'
-)
+PROMPT_JUIZ = "artemis-rag/juiz"
 
 
 class JuizSemVeredito(ValueError):
@@ -91,7 +83,7 @@ def julgar(resposta, pergunta, juiz=None):
         return {**linha, "nota": 0.0, "veredito": "ABSTENCAO_INDEVIDA", "justificativa": "a base tem a resposta"}
     usuario = (f"PERGUNTA: {resposta['pergunta']}\n\nGABARITO: {gabarito(pergunta)}\n\n"
                f"RESPOSTA DO SISTEMA: {resposta['resposta']}")
-    veredito, justificativa = ler_veredito((juiz or chamar_juiz)(SISTEMA_JUIZ, usuario))
+    veredito, justificativa = ler_veredito((juiz or chamar_juiz)(obter_prompt(PROMPT_JUIZ), usuario))
     return {**linha, "nota": NOTAS[veredito], "veredito": veredito, "justificativa": justificativa}
 
 
@@ -170,6 +162,8 @@ def main():
                 continue
             try:
                 nota = julgar(resposta, pergunta)
+            except PromptIndisponivel:
+                raise  # sem prompt, nenhuma nota é possível: para em vez de gravar erro em cada resposta
             except Exception as exc:  # uma falha não interrompe a rodada; fica registrada para refazer
                 nota = {"id": resposta["id"], "conjunto": resposta.get("conjunto"), "condicao": resposta["condicao"],
                         "respondivel": pergunta.get("expected_behavior") != "abstain", "nota": None,

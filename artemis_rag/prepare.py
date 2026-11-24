@@ -1,6 +1,6 @@
 """Build deterministic, overlapping character chunks with traceable metadata."""
 
-from src.common import PROCESSED, digest, load_jsonl, write_jsonl
+from artemis_rag.common import PROCESSED, digest, load_jsonl, write_jsonl
 
 
 def split_text(text, chunk_size=1200, overlap=180):
@@ -46,7 +46,7 @@ def prepare(documents, chunk_size=600, overlap=100):
 
 
 def main():
-    from src.quality import validate_chunks, validate_documents
+    from artemis_rag.quality import validate_chunks, validate_documents
     docs = load_jsonl(PROCESSED / "documents.jsonl")
     validate_documents(docs)
     chunks = prepare(docs)

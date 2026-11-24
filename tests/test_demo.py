@@ -1,5 +1,5 @@
-from src.demo import render_markdown, run
-from src.query import ABSTENTION
+from artemis_rag.demo import render_markdown, run
+from artemis_rag.query import ABSTENTION
 
 
 class FakeRetriever:

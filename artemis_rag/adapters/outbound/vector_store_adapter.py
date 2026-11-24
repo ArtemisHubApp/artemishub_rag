@@ -1,7 +1,7 @@
 
-from src.application.ports.vector_store import VectorStore
-from src.domain.entities import Chunk
-from src.index import build_index
+from artemis_rag.application.ports.vector_store import VectorStore
+from artemis_rag.domain.entities import Chunk
+from artemis_rag.index import build_index
 
 
 class SimpleVectorStoreAdapter(VectorStore):

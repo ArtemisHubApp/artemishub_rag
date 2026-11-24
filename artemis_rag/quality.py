@@ -3,7 +3,7 @@ from collections import Counter
 from datetime import datetime
 from urllib.parse import urlparse
 
-from src.common import digest, looks_garbled
+from artemis_rag.common import digest, looks_garbled
 
 DOCUMENT_FIELDS = ("document_id", "title", "source", "source_url", "document_type",
                    "collected_at", "content", "content_hash", "metadata")
