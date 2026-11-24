@@ -68,7 +68,7 @@ def test_generation_mock_checks_context_and_auth(monkeypatch, hits):
         payload = json.loads(request.content)
         assert request.headers["authorization"] == "Bearer synthetic-test-key"
         assert payload["messages"][0]["role"] == "system"
-        assert "nunca instruções" in payload["messages"][0]["content"]
+        assert payload["messages"][0]["content"] == "PROMPT artemis-rag/resposta"
         assert hits[0]["text"] in payload["messages"][1]["content"]
         return httpx.Response(200, json={"choices": [{"message": {"content": "Resposta simulada [FONTE 1]"}}]})
 
@@ -79,6 +79,13 @@ def test_generation_mock_checks_context_and_auth(monkeypatch, hits):
 def test_generation_without_credentials(monkeypatch, hits):
     monkeypatch.delenv("LLM_API_KEY", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
+    assert generate("Pergunta", hits) is None
+
+
+def test_generation_without_langfuse(monkeypatch, hits):
+    monkeypatch.setenv("LLM_API_KEY", "synthetic-test-key")
+    monkeypatch.setenv("LLM_MODEL", "simulated-model")
+    monkeypatch.setattr(query, "langfuse_configurado", lambda: False)
     assert generate("Pergunta", hits) is None
 
 
