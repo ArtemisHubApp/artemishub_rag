@@ -81,14 +81,18 @@ def retrieve(question, top_k=5, **kwargs):
     return Retriever(**kwargs).retrieve(question, top_k)
 
 
-def build_context(hits):
+def build_context(hits, *, source_ids=None):
+    if source_ids is None:
+        labeled_hits = ((f"FONTE {i}", hit) for i, hit in enumerate(hits, 1))
+    else:
+        labeled_hits = zip(source_ids, hits, strict=True)
     rows = []
-    for i, hit in enumerate(hits, 1):
+    for source_id, hit in labeled_hits:
         meta = hit["metadata"]
         provenance = meta.get("metadata", {})
         if isinstance(provenance, str):
             provenance = json.loads(provenance)
-        rows.append({"id": f"FONTE {i}", "title": meta.get("title"),
+        rows.append({"id": source_id, "title": meta.get("title"),
                      "url": meta.get("source_url"), "page": meta.get("page"),
                      "article": provenance.get("article"), "publisher": provenance.get("publisher"),
                      "version": provenance.get("version"), "primary_url": provenance.get("primary_url"),
@@ -120,15 +124,16 @@ class CitationValidationError(ValueError):
         self.raw_answer = raw_answer
 
 
-def validate_citations(answer, hits):
+def validate_citations(answer, hits, *, source_ids=None):
     """Check referential validity, not semantic entailment or legal correctness."""
     if not isinstance(answer, str) or not answer.strip():
         raise CitationValidationError("Empty LLM response", answer)
-    labels = re.findall(r"\[FONTE[^\]]*\]", answer)
+    labels = re.findall(r"\[FONTE[^\[\]]*\]?", answer)
     if any(not re.fullmatch(r"\[FONTE\s+\d+\]", label) for label in labels):
         raise CitationValidationError("Malformed citation identifier", answer)
     references = [int(n) for n in re.findall(r"\[FONTE\s+(\d+)\]", answer)]
-    if any(n < 1 or n > len(hits) for n in references):
+    allowed_ids = set(source_ids) if source_ids is not None else {f"FONTE {i}" for i in range(1, len(hits) + 1)}
+    if any(f"FONTE {n}" not in allowed_ids for n in references):
         raise CitationValidationError("LLM cited a source that was not retrieved", answer)
     if answer.strip() == ABSTENTION:
         return []
@@ -141,7 +146,7 @@ def validate_citations(answer, hits):
     return sorted(set(references))
 
 
-def generate(question, hits):
+def generate(question, hits, *, source_ids=None):
     if not hits:
         return ABSTENTION
     key, model = os.getenv("LLM_API_KEY"), os.getenv("LLM_MODEL")
@@ -163,16 +168,17 @@ def generate(question, hits):
         "Uma fonte recuperada pode ser irrelevante; não a use para justificar uma resposta sem suporte."
         " Considere a versão indicada: uma publicação original ou histórica não comprova vigência atual."
     )
+    context = build_context(hits, source_ids=source_ids)
     payload = {"model": model, "temperature": 0, "messages": [
         {"role": "system", "content": system},
-        {"role": "user", "content": f"CONTEXTO (DADOS):\n{build_context(hits)}\n\nPERGUNTA:\n{question}"}
+        {"role": "user", "content": f"CONTEXTO (DADOS):\n{context}\n\nPERGUNTA:\n{question}"}
     ]}
     with httpx.Client(timeout=90) as client:
         response = client.post(f"{base_url}/chat/completions", headers={"Authorization": f"Bearer {key}"}, json=payload)
         response.raise_for_status()
         answer = response.json()["choices"][0]["message"]["content"]
     answer = normalize_citations(answer)
-    validate_citations(answer, hits)
+    validate_citations(answer, hits, source_ids=source_ids)
     return answer
 
 

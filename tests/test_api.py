@@ -105,8 +105,13 @@ def test_pipeline_publica_no_diretorio_da_variavel(tmp_path, documento, monkeypa
 
 
 def test_sem_indice_publicado_levanta_indice_indisponivel(tmp_path):
-    with pytest.raises(IndiceIndisponivel, match=r"No published index\. Run python -m artemis_rag\.pipeline first\."):
+    with pytest.raises(IndiceIndisponivel, match="No published index") as erro:
         buscar(PERGUNTA, indice=tmp_path)
+    mensagem = str(erro.value)
+    assert "python -m artemis_rag.pipeline" in mensagem
+    assert "RAG checkout" in mensagem
+    assert "ARTEMIS_RAG_INDEX_DIR" in mensagem
+    assert "published index directory" in mensagem
     assert issubclass(IndiceIndisponivel, ValueError)
 
 
@@ -152,3 +157,49 @@ def test_gerar_sem_llm_ou_sem_evidencia(indice, monkeypatch):
     monkeypatch.delenv("LLM_MODEL", raising=False)
     assert gerar(PERGUNTA, buscar(PERGUNTA, indice=indice)) is None
     assert gerar(PERGUNTA, []) == ABSTENTION
+
+
+@pytest.mark.parametrize("posicoes", [(1,), (2, 0)], ids=["filtradas", "reordenadas"])
+def test_validar_citacoes_respeita_ids_enviados(indice, posicoes):
+    ranking = buscar(PERGUNTA, top_k=3, indice=indice)
+    evidencias = [ranking[posicao] for posicao in posicoes]
+    citacoes = " ".join(f"[{evidencia.id}]" for evidencia in evidencias)
+    assert validar_citacoes(f"Afirmação {citacoes}", evidencias) == sorted(posicao + 1 for posicao in posicoes)
+
+    omitida = next(evidencia for evidencia in ranking if evidencia not in evidencias)
+    with pytest.raises(CitationValidationError):
+        validar_citacoes(f"Afirmação [{omitida.id}]", evidencias)
+
+
+@pytest.mark.parametrize("posicoes", [(1,), (2, 0)], ids=["filtradas", "reordenadas"])
+def test_gerar_respeita_ids_e_ordem_das_evidencias(indice, monkeypatch, posicoes):
+    ranking = buscar(PERGUNTA, top_k=3, indice=indice)
+    evidencias = [ranking[posicao] for posicao in posicoes]
+    resposta = f"Afirmação [{evidencias[0].id}]"
+    enviados = []
+    with monkeypatch.context() as llm:
+        _llm_simulado(llm, enviados, resposta)
+        assert gerar(PERGUNTA, evidencias) == resposta
+
+    contexto = json.loads(enviados[0]["messages"][1]["content"].splitlines()[1])
+    assert [(fonte["id"], fonte["text"]) for fonte in contexto] == [
+        (evidencia.id, evidencia.texto) for evidencia in evidencias
+    ]
+
+    omitida = next(evidencia for evidencia in ranking if evidencia not in evidencias)
+    _llm_simulado(monkeypatch, enviados, f"Afirmação [{omitida.id}]")
+    with pytest.raises(CitationValidationError):
+        gerar(PERGUNTA, evidencias)
+
+
+def test_validar_citacoes_rejeita_rotulo_incompleto_apos_citacao_valida(indice):
+    evidencias = buscar(PERGUNTA, indice=indice)
+    with pytest.raises(CitationValidationError, match="Malformed citation identifier"):
+        validar_citacoes("Afirmação [FONTE 1] [FONTE 3", evidencias)
+
+
+def test_gerar_rejeita_rotulo_incompleto_apos_citacao_valida(indice, monkeypatch):
+    evidencias = buscar(PERGUNTA, indice=indice)
+    _llm_simulado(monkeypatch, [], "Afirmação [FONTE 1] [FONTE 3")
+    with pytest.raises(CitationValidationError, match="Malformed citation identifier"):
+        gerar(PERGUNTA, evidencias)
