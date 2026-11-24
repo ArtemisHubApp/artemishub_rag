@@ -8,22 +8,20 @@ de contexto recuperados (Top-5), seguindo a metodologia do RAGAS:
 - Fidelidade = (afirmações suportadas) / (total de afirmações).
 
 Uso:
-    python -m scripts.evaluate_faithfulness --respostas reports/respostas_comparacao.jsonl \
+    uv run python -m scripts.evaluate_faithfulness --respostas reports/respostas_comparacao.jsonl \
         --saida reports/fidelidade_rag.jsonl
-    python -m scripts.evaluate_faithfulness   # usa os caminhos padrão em reports/
+    uv run python -m scripts.evaluate_faithfulness   # usa os caminhos padrão em reports/
 """
 import argparse
 import datetime as dt
 import json
 import os
 import re
-import time
 from collections import defaultdict
 from pathlib import Path
 
-import httpx
-
-from src.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.common import ROOT, load_jsonl, write_jsonl
+from artemis_rag.llm_client import chamar_chat, configuracao_llm
 
 RESPOSTAS_PADRAO = ROOT / "reports" / "respostas_comparacao.jsonl"
 SAIDA_PADRAO = ROOT / "reports" / "fidelidade_rag.jsonl"
@@ -78,41 +76,10 @@ def formatar_contexto(trechos):
     return "\n\n".join(linhas)
 
 
-def chamar_avaliador(sistema, usuario, tentativas=3):
-    """Chama o modelo avaliador via endpoint compatível com Chat Completions."""
+def chamar_avaliador(sistema, usuario):
+    """Chama o modelo avaliador via artemis_rag.llm_client."""
     modelo = os.getenv("JUDGE_MODEL") or os.getenv("LLM_MODEL")
-    chave = os.getenv("LLM_API_KEY")
-    if not modelo or not chave:
-        raise RuntimeError("Defina LLM_API_KEY e LLM_MODEL (ou JUDGE_MODEL) no .env.")
-
-    base_url = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
-    corpo = {
-        "model": modelo,
-        "temperature": 0,
-        "messages": [
-            {"role": "system", "content": sistema},
-            {"role": "user", "content": usuario},
-        ],
-    }
-    cabecalho = {"Authorization": f"Bearer {chave}"}
-
-    for tentativa in range(1, tentativas + 1):
-        try:
-            with httpx.Client(timeout=90) as client:
-                resposta = client.post(f"{base_url}/chat/completions", json=corpo, headers=cabecalho)
-                if resposta.status_code == 429 and tentativa < tentativas:
-                    time.sleep(10 * tentativa)
-                    continue
-                resposta.raise_for_status()
-                return resposta.json()["choices"][0]["message"]["content"]
-        except Exception as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", getattr(exc, "code", None))
-            if status == 429 and tentativa < tentativas:
-                time.sleep(10 * tentativa)
-                continue
-            if tentativa == tentativas:
-                raise
-            time.sleep(5 * tentativa)
+    return chamar_chat(sistema, usuario, modelo=modelo)
 
 
 def ler_veredito_fidelidade(texto):
@@ -268,6 +235,8 @@ def main():
     parser.add_argument("--saida", type=Path, default=SAIDA_PADRAO)
     parser.add_argument("--limite", type=int, help="Número máximo de avaliações (para testes)")
     args = parser.parse_args()
+
+    configuracao_llm(os.getenv("JUDGE_MODEL") or os.getenv("LLM_MODEL"))
 
     respostas_path = args.respostas if args.respostas.is_absolute() else ROOT / args.respostas
     saida_path = args.saida if args.saida.is_absolute() else ROOT / args.saida
