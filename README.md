@@ -99,7 +99,7 @@ uv sync --dev
 cp .env.example .env
 ```
 
-O `.env` só precisa ser preenchido para usar o LLM (`LLM_API_KEY`, `LLM_MODEL` e, se necessário, `LLM_BASE_URL`).
+O `.env` só precisa ser preenchido para usar o LLM (`LLM_API_KEY`, `LLM_MODEL` e, se necessário, `LLM_BASE_URL`). Os prompts moram no Langfuse, nunca no repo: a geração, a comparação e o juiz também precisam de `LANGFUSE_PUBLIC_KEY` e `LANGFUSE_SECRET_KEY` (e `LANGFUSE_BASE_URL`, se não for a região padrão).
 
 ```bash
 uv run python -m artemis_rag.pipeline      # coleta, prepara e indexa as fontes

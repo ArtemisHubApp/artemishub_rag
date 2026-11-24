@@ -36,7 +36,7 @@ A interface pública fica em `artemis_rag/api.py` e é reexportada em `artemis_r
 | `Evidencia` | Dataclass imutável: `id`, `titulo`, `url`, `pagina`, `artigo`, `texto`, `distancia`, mais a procedência opcional (`publicador`, `versao`, `url_primaria`, `alternativa_usada`). `id` é `"FONTE 1"`, `"FONTE 2"`... na ordem do ranking; `pagina` e `artigo` são `None` quando não se aplicam. |
 | `buscar(pergunta, top_k=5, indice=None, parcial=False)` | Busca híbrida (a mesma da CLI), sem LLM. Devolve `list[Evidencia]`. |
 | `validar_citacoes(resposta, evidencias)` | Números de FONTE citados, ordenados; `[]` para a abstenção. Levanta `CitationValidationError` para fonte inexistente, rótulo malformado ou parágrafo sem citação. Confere a referência, não se o trecho sustenta a frase. |
-| `gerar(pergunta, evidencias)` | Resposta do LLM com citações já validadas. Devolve `ABSTENTION` sem evidências e `None` sem `LLM_API_KEY`/`LLM_MODEL`. Envia ao LLM o mesmo contexto que a CLI. |
+| `gerar(pergunta, evidencias)` | Resposta do LLM com citações já validadas. Devolve `ABSTENTION` sem evidências e `None` sem `LLM_API_KEY`/`LLM_MODEL` ou sem as chaves do Langfuse; `PromptIndisponivel` se o prompt não puder ser lido. Envia ao LLM o mesmo contexto que a CLI. |
 | `IndiceIndisponivel` | Subclasse de `ValueError`: não há índice publicado, ou só um parcial e `parcial=False`. |
 | `ABSTENTION`, `CitationValidationError` | Texto da abstenção e erro do validador. |
 
@@ -98,3 +98,15 @@ git diff --check
 ```
 
 Não há revisão humana independente dos 20 casos nem validação real de geração. Não trate a publicação original de uma norma como confirmação automática de vigência.
+
+## Prompts no Langfuse
+
+O texto dos prompts não fica no repositório. O código busca pelo label `LANGFUSE_PROMPT_LABEL` (padrão `production`):
+
+| Prompt | Usado por |
+|---|---|
+| `artemis-rag/resposta` | `generate` e `gerar` |
+| `artemis-rag/comparacao-sem-documentos` e `artemis-rag/comparacao-passo-a-passo` | `scripts/compare_llm_rag.py` (mesmo início; mude os dois juntos) |
+| `artemis-rag/juiz` | `scripts/judge_answers.py` |
+
+A versão 1 de cada um é o texto que estava no código, sem mudança. Ao avaliar uma versão nova, registre o número dela junto com o resultado. O histórico do git ainda contém os textos antigos.
