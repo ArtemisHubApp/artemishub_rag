@@ -106,6 +106,7 @@ uv run python -m artemis_rag.eda           # gera o perfil do dataset em reports
 uv run python -m artemis_rag.query "O que a cartilha informa sobre transparência salarial?"
 uv run python -m artemis_rag.evaluate      # métricas de recuperação
 uv run python -m artemis_rag.demo          # demonstração com LLM em reports/demo_rag.md
+uv run python -m scripts.evaluate_faithfulness  # avaliação de fidelidade (RAGAS) em reports/fidelidade_rag.jsonl
 ```
 
 A primeira execução baixa as fontes e o modelo de embeddings. Outras opções (`--skip-index`, `--allow-partial`, `--retrieval`, `--chunk-size`) estão em [`docs/rag_usage.md`](docs/rag_usage.md).
