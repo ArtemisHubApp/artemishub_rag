@@ -1,0 +1,36 @@
+# Release deste repo em SemVer (ADR-013 do artemishub_docs): roda quando um PR `release: <tema>` é
+# mesclado na main e por disparo manual. A versão, o nome e as notas vêm do workflow reutilizável do
+# orquestrador, igual nos 6 repos; regras no AGENTS.md do orquestrador (Higiene do GitHub, item 8).
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Força a versão (vX.Y.Z). Vazio: calcula pelos PRs."
+        default: ""
+      alvo:
+        description: "Commit da release. Vazio: a ponta da main."
+        default: ""
+      titulo_release:
+        description: "Título do PR de release (release: <tema>). Vazio: o do PR que gerou o commit."
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'release:')
+    uses: ArtemisHubApp/artemishub_orchestration/.github/workflows/release-reutilizavel.yml@main
+    with:
+      versao: ${{ inputs.versao || '' }}
+      alvo: ${{ inputs.alvo || '' }}
+      titulo_release: ${{ inputs.titulo_release || '' }}
