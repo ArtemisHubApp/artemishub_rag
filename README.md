@@ -83,7 +83,6 @@ Detalhes em [`docs/architecture.md`](docs/architecture.md).
 ├── scripts/                   # experimentos de chunking e busca
 ├── tests/                     # testes automatizados (pytest)
 ├── docs/                      # arquitetura, uso, relatório de validação, specs
-├── agent/                     # skills de desenvolvimento orientado a spec (SDD)
 ├── .github/workflows/ci.yml   # CI: Ruff + pytest em Python 3.11, 3.12 e 3.13
 └── Dockerfile
 ```
@@ -187,6 +186,7 @@ Uma tentativa de corrigir, via prompt, um parágrafo de disclaimer que o modelo 
 - [Uso detalhado do RAG](docs/rag_usage.md)
 - [Relatório de validação](docs/validation_report.md)
 - [Spec da orquestração](docs/superpowers/specs/2026-11-05-agent-orchestration.md) e [planos](docs/superpowers/plans/)
+- As regras de SDD e as skills dos agentes de IA ficam só no [orquestrador](https://github.com/ArtemisHubApp/artemishub_orchestration) (`AGENTS.md` e `.agents/skills/`). Abra o agente na raiz do orquestrador para que ele leia as duas coisas.
 
 ## 👩‍💻 Equipe
 
